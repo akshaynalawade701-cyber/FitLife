@@ -279,8 +279,8 @@
               </div>
               <div id="gc-quality" class="muted" style="margin-top:8px"></div>
               <div class="row">
-                <button id="gc-analyze-btn" class="btn btn-primary">Run guided analysis</button>
-                <button id="gc-set-baseline" class="btn">Set as baseline</button>
+                <button id="gc-analyze-btn" class="btn btn-primary" onclick="(window.gcAnalyze&&window.gcAnalyze())||(window.gcAnalyzeFallback&&window.gcAnalyzeFallback())">Run guided analysis</button>
+                <button id="gc-set-baseline" class="btn" onclick="(window.gcSetBaseline&&window.gcSetBaseline())||(window.gcSetBaselineFallback&&window.gcSetBaselineFallback())">Set as baseline</button>
                 <label class="row-inline" style="gap:6px">
                   <input id="gc-compare-toggle" type="checkbox"> <span>Compare to baseline overlay</span>
                 </label>

@@ -849,6 +849,7 @@ async function guidedAnalyze(){
 }
 
 $('#gc-analyze-btn')?.addEventListener('click', guidedAnalyze);
+window.gcAnalyze = guidedAnalyze;
 
 // Delegate guided CTAs to be extra-robust
 document.addEventListener('click', (e)=>{
@@ -876,6 +877,19 @@ $('#gc-set-baseline')?.addEventListener('click', async ()=>{
   saveBaseline({ date: now, metrics: fusedMetrics });
   alert('Baseline saved. Track changes weekly.');
 });
+window.gcSetBaseline = async ()=>{
+  const frontF = $('#gc-front')?.files?.[0]; const sideF = $('#gc-side')?.files?.[0]; const backF = $('#gc-back')?.files?.[0];
+  await ensureDetector();
+  const views=[];
+  for (const f of [frontF, sideF, backF].filter(Boolean)){
+    const img=await readImage(f); const kps=await analyzePoseOnImage(detector,img); views.push({ kps });
+  }
+  const metricsList = views.map(v=>computeMetricsFromKeypoints(v.kps)).filter(Boolean);
+  if (!metricsList.length){ alert('No valid poses to set baseline.'); return; }
+  const fused = metricsList.reduce((acc,m)=>({ shoulderTilt:(acc.shoulderTilt||0)+m.shoulderTilt, hipTilt:(acc.hipTilt||0)+m.hipTilt, forwardHead:(acc.forwardHead||0)+m.forwardHead, torso:(acc.torso||0)+((m.symmetry?.torsoDiffPct)||0)}),{});
+  const n=metricsList.length; const fusedMetrics={ shoulderTilt:fused.shoulderTilt/n, hipTilt:fused.hipTilt/n, forwardHead:fused.forwardHead/n, torsoDiffPct:fused.torso/n };
+  saveBaseline({ date:new Date().toISOString(), metrics:fusedMetrics }); alert('Baseline saved.');
+};
 
 // Weekly check-in trend (simple delta display)
 function showTrend(current){ const base=loadBaseline(); if(!base) return ''; function fmt(v,u){ return (v>0?'+':'')+v+u; } const dS=(current.shoulderTilt-(base.metrics.shoulderTilt||0)).toFixed(1); const dH=(current.hipTilt-(base.metrics.hipTilt||0)).toFixed(1); const dF=Math.round(current.forwardHead*100 - (base.metrics.forwardHead*100||0)); const dT=Math.round(current.torsoDiffPct*100 - (base.metrics.torsoDiffPct*100||0)); return `<div class="metric"><h4>Trend vs baseline (${base.date.slice(0,10)})</h4><div class="kv"><span>Shoulders</span><span>${fmt(dS,'°')}</span></div><div class="kv"><span>Hips</span><span>${fmt(dH,'°')}</span></div><div class="kv"><span>Head forward</span><span>${fmt(dF,'%')}</span></div><div class="kv"><span>Torso symmetry</span><span>${fmt(dT,'%')}</span></div></div>`; }

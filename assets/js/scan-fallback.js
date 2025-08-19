@@ -332,7 +332,8 @@
     }
 
     setStatus('Done · ' + `Shoulder ${fmtDeg(fusedM.shoulderTilt)} · Hip ${fmtDeg(fusedM.hipTilt)} · FHP ${fmtPct(fusedM.forwardHead)} · Torso ${fmtPct(fusedM.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
-  }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
+  }
+  window.gcAnalyzeFallback = guidedAnalyzeFallback;
 
   async function guidedSetBaselineFallback(){
     const fF = document.getElementById('gc-front')?.files?.[0]; const fS = document.getElementById('gc-side')?.files?.[0]; const fB = document.getElementById('gc-back')?.files?.[0];
@@ -350,6 +351,7 @@
     const n=metricsList.length; const fusedM={ shoulderTilt:fused.shoulderTilt/n, hipTilt:fused.hipTilt/n, forwardHead:fused.forwardHead/n, torsoDiffPct:fused.torso/n };
     const now=new Date().toISOString(); try { localStorage.setItem('fitlife_baseline', JSON.stringify({ date: now, metrics: fusedM })); alert('Baseline saved.'); } catch { alert('Failed to save baseline.'); }
   }
+  window.gcSetBaselineFallback = guidedSetBaselineFallback;
 
   // Delegate guided capture CTAs if module not booted
   document.addEventListener('click', (e)=>{
