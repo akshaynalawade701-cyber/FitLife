@@ -410,7 +410,7 @@ function renderResults(report) {
   results.appendChild(limb);
 }
 
-function drawOverlay(baseImage, keypoints, metrics, limb) {
+function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
   const canvas = document.getElementById('bs-annotated');
   const wrap = canvas?.parentElement;
   if (wrap) wrap.classList.remove('hidden');
@@ -439,6 +439,14 @@ function drawOverlay(baseImage, keypoints, metrics, limb) {
     ctx.strokeText(text, tx, ty);
     ctx.fillStyle = '#ffffff';
     ctx.fillText(text, tx, ty);
+  };
+  const drawCornerText = (x, y, text) => {
+    ctx.font = `${Math.max(12, Math.floor(w/60))}px ui-sans-serif, system-ui`;
+    ctx.lineWidth = Math.max(2, Math.floor(w/800));
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, x, y);
   };
 
   // Skeleton lines
@@ -504,6 +512,16 @@ function drawOverlay(baseImage, keypoints, metrics, limb) {
   if (limb && Number.isFinite(limb.legDiff)) {
     drawBadge(w*0.04, h*0.08 + Math.max(28, h/20), `Legs balance: ${(limb.legDiff*100).toFixed(0)}% diff (≤ 10%)`);
   }
+
+  // Scores and summaries (top-right)
+  const scores = options.scores || null;
+  const summaries = options.summaries || [];
+  let y = 20;
+  if (scores){
+    drawCornerText(w - 210, y, `Posture score: ${scores.posture}`); y += 18;
+    drawCornerText(w - 210, y, `Symmetry score: ${scores.symmetry}`); y += 22;
+  }
+  summaries.forEach(s => { drawCornerText(w - 210, y, s); y += 18; });
 }
 
 // Wire unit toggles
@@ -779,11 +797,15 @@ async function guidedAnalyze(){
   const torsoStr = (fusedMetrics.torsoDiffPct*100)<=5 ? 'Torso: symmetric' : `Torso: ${Math.round(fusedMetrics.torsoDiffPct*100)}% left/right difference`;
   summaryEl.innerHTML = `<ul><li>${shoulderStr}</li><li>${hipStr}</li><li>${headStr}</li><li>${torsoStr}</li></ul>`;
 
-  // Baseline compare & overlay
-  const overlay = $('#gc-compare-toggle')?.checked;
-  if (overlay && allKps[0]){
-    // draw first selected view with overlayed ideal lines
-    drawOverlay(allKps[0].img, allKps[0].kps, { shoulderTilt:fusedMetrics.shoulderTilt, hipTilt:fusedMetrics.hipTilt, forwardHead:fusedMetrics.forwardHead, symmetry:{ torsoDiffPct:fusedMetrics.torsoDiffPct } }, null);
+  // Always draw overlay with fused metrics on the first available view
+  if (allKps[0]){
+    drawOverlay(
+      allKps[0].img,
+      allKps[0].kps,
+      { shoulderTilt:fusedMetrics.shoulderTilt, hipTilt:fusedMetrics.hipTilt, forwardHead:fusedMetrics.forwardHead, symmetry:{ torsoDiffPct:fusedMetrics.torsoDiffPct } },
+      null,
+      { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr] }
+    );
   }
 }
 
