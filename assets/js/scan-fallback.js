@@ -325,7 +325,11 @@
 
     // Draw overlay on first valid view
     const bestView = all.find(v=>v.kps && v.kps.length) || all[0];
-    if (bestView){ drawOverlayFallback(bestView.img, bestView.kps); try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{} }
+    if (bestView){
+      drawOverlayFallback(bestView.img, bestView.kps);
+      try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
+      try { const snap=document.getElementById('bs-annotated').toDataURL('image/png'); const img=new Image(); img.src=snap; img.style.width='100%'; img.style.borderRadius='12px'; img.style.border='1px solid var(--border)'; const holder=document.createElement('div'); holder.className='metric'; holder.innerHTML='<h4>Annotated view</h4>'; holder.appendChild(img); results.prepend(holder); } catch {}
+    }
 
     setStatus('Done · ' + `Shoulder ${fmtDeg(fusedM.shoulderTilt)} · Hip ${fmtDeg(fusedM.hipTilt)} · FHP ${fmtPct(fusedM.forwardHead)} · Torso ${fmtPct(fusedM.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
   }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
