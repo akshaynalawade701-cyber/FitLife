@@ -650,6 +650,12 @@ async function analyzeAndRender() {
     // Draw overlay with metrics
     drawOverlay(baseImage, kps, metrics, limb);
     try { document.getElementById('bs-annotated')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    // Snapshot into results
+    try {
+      const snap = document.getElementById('bs-annotated').toDataURL('image/png');
+      const imgEl = new Image(); imgEl.src = snap; imgEl.style.width = '100%'; imgEl.style.borderRadius = '12px'; imgEl.style.border = '1px solid var(--border)';
+      const res = document.getElementById('bs-results'); if (res){ const holder = document.createElement('div'); holder.className = 'metric'; holder.innerHTML = '<h4>Annotated view</h4>'; holder.appendChild(imgEl); res.prepend(holder); }
+    } catch {}
 
     const { sex, age, heightM, weightKg } = getScanInputs();
     const bmi = computeBMI(heightM, weightKg);
@@ -808,6 +814,14 @@ async function guidedAnalyze(){
       { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr] }
     );
     try { document.getElementById('bs-annotated')?.scrollIntoView({ behavior:'smooth', block:'center' }); } catch {}
+    // Also snapshot into results panel
+    try {
+      const snap = document.getElementById('bs-annotated').toDataURL('image/png');
+      const imgEl = new Image(); imgEl.src = snap; imgEl.style.width = '100%'; imgEl.style.borderRadius = '12px'; imgEl.style.border = '1px solid var(--border)';
+      const holder = document.createElement('div'); holder.className = 'metric'; holder.innerHTML = '<h4>Annotated view</h4>';
+      holder.appendChild(imgEl);
+      summaryEl.parentNode.insertBefore(holder, summaryEl);
+    } catch {}
   }
 }
 
