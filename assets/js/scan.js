@@ -798,14 +798,16 @@ async function guidedAnalyze(){
   summaryEl.innerHTML = `<ul><li>${shoulderStr}</li><li>${hipStr}</li><li>${headStr}</li><li>${torsoStr}</li></ul>`;
 
   // Always draw overlay with fused metrics on the first available view
-  if (allKps[0]){
+  const bestView = allKps.find(v => v.kps && v.kps.length) || allKps[0];
+  if (bestView){
     drawOverlay(
-      allKps[0].img,
-      allKps[0].kps,
+      bestView.img,
+      bestView.kps,
       { shoulderTilt:fusedMetrics.shoulderTilt, hipTilt:fusedMetrics.hipTilt, forwardHead:fusedMetrics.forwardHead, symmetry:{ torsoDiffPct:fusedMetrics.torsoDiffPct } },
       null,
       { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr] }
     );
+    try { document.getElementById('bs-annotated')?.scrollIntoView({ behavior:'smooth', block:'center' }); } catch {}
   }
 }
 

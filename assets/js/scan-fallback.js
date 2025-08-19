@@ -323,9 +323,12 @@
     const torsoStr = (fusedM.torsoDiffPct*100)<=5 ? 'Torso: symmetric' : `Torso: ${Math.round(fusedM.torsoDiffPct*100)}% L/R difference`;
     summaryEl.innerHTML = `<ul><li>${shoulderStr}</li><li>${hipStr}</li><li>${headStr}</li><li>${torsoStr}</li></ul>`;
 
-    const overlay = document.getElementById('gc-compare-toggle')?.checked; if (overlay && all[0]){ drawOverlayFallback(all[0].img, all[0].kps); }
-    try { summaryEl.scrollIntoView({ behavior:'smooth', block:'start' }); } catch {}
-  }
+    // Draw overlay on first valid view
+    const bestView = all.find(v=>v.kps && v.kps.length) || all[0];
+    if (bestView){ drawOverlayFallback(bestView.img, bestView.kps); try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{} }
+
+    setStatus('Done · ' + `Shoulder ${fmtDeg(fusedM.shoulderTilt)} · Hip ${fmtDeg(fusedM.hipTilt)} · FHP ${fmtPct(fusedM.forwardHead)} · Torso ${fmtPct(fusedM.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
+  }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
 
   async function guidedSetBaselineFallback(){
     const fF = document.getElementById('gc-front')?.files?.[0]; const fS = document.getElementById('gc-side')?.files?.[0]; const fB = document.getElementById('gc-back')?.files?.[0];
