@@ -602,8 +602,31 @@ function attachCtas() {
   }
 }
 
+function attachGuidedPreviews(){
+  const make = (inputId, previewId) => {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (!input || !preview) return;
+    input.addEventListener('change', ()=>{
+      preview.innerHTML = '';
+      const f = input.files?.[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      const img = new Image();
+      img.onload = ()=> URL.revokeObjectURL(url);
+      img.src = url; img.style.width='100%'; img.style.borderRadius='10px';
+      const wrap = document.createElement('div'); wrap.className='thumb';
+      wrap.appendChild(img); preview.appendChild(wrap);
+    });
+  };
+  make('gc-front','gc-front-preview');
+  make('gc-side','gc-side-preview');
+  make('gc-back','gc-back-preview');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   attachCtas();
+  attachGuidedPreviews();
 });
 
 // Also reattach when the section is clicked (defensive)
