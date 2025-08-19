@@ -789,6 +789,13 @@ async function guidedAnalyze(){
 
 $('#gc-analyze-btn')?.addEventListener('click', guidedAnalyze);
 
+// Delegate guided CTAs to be extra-robust
+document.addEventListener('click', (e)=>{
+  const t = e.target instanceof Element ? e.target : null; if (!t) return;
+  if (t.closest('#gc-analyze-btn')){ e.preventDefault(); guidedAnalyze().catch(err=>{ const q=$('#gc-quality'); if(q) q.textContent = 'Analysis failed. Try clearer photos.'; }); }
+  if (t.closest('#gc-set-baseline')){ e.preventDefault(); const btn=$('#gc-set-baseline'); btn?.setAttribute('disabled','true'); (async ()=>{ try{ const frontF = $('#gc-front')?.files?.[0]; const sideF = $('#gc-side')?.files?.[0]; const backF = $('#gc-back')?.files?.[0]; await ensureDetector(); const views=[]; for (const f of [frontF, sideF, backF].filter(Boolean)){ const img=await readImage(f); const kps=await analyzePoseOnImage(detector,img); views.push({ kps }); } const metricsList = views.map(v=>computeMetricsFromKeypoints(v.kps)).filter(Boolean); if(!metricsList.length){ alert('No valid poses to set baseline.'); return; } const fused = metricsList.reduce((acc,m)=>({ shoulderTilt:(acc.shoulderTilt||0)+m.shoulderTilt, hipTilt:(acc.hipTilt||0)+m.hipTilt, forwardHead:(acc.forwardHead||0)+m.forwardHead, torso:(acc.torso||0)+((m.symmetry?.torsoDiffPct)||0)}),{}); const n=metricsList.length; const fusedMetrics={ shoulderTilt:fused.shoulderTilt/n, hipTilt:fused.hipTilt/n, forwardHead:fused.forwardHead/n, torsoDiffPct:fused.torso/n }; saveBaseline({ date:new Date().toISOString(), metrics:fusedMetrics }); alert('Baseline saved.'); } catch{ alert('Failed to save baseline.'); } finally { btn?.removeAttribute('disabled'); } })(); }
+});
+
 // Baseline storage and trend
 function loadBaseline(){ try { return JSON.parse(localStorage.getItem('fitlife_baseline')||'null'); } catch { return null; } }
 function saveBaseline(data){ localStorage.setItem('fitlife_baseline', JSON.stringify(data)); }
