@@ -274,6 +274,83 @@
 
   function fallbackClear(){ try{ const img=$('#bs-images'); if(img) img.value=''; const vid=$('#bs-video'); if(vid) vid.value=''; const p=$('#bs-previews'); if(p) p.innerHTML=''; const vp=$('#bs-video-previews'); if(vp) vp.innerHTML=''; skipImages.clear(); skipVideos.clear(); const res=$('#bs-results'); if(res) res.innerHTML=''; setStatus(''); const wrap=document.querySelector('.annotated-wrap'); wrap?.classList.add('hidden'); const cvs=document.getElementById('bs-annotated'); const ctx=cvs?.getContext && cvs.getContext('2d'); if(ctx&&cvs){ ctx.clearRect(0,0,cvs.width,cvs.height); } ['#bs-age','#bs-height-cm','#bs-weight-kg','#bs-feet','#bs-inches','#bs-pounds'].forEach(sel=>{ const el=$(sel); if(el) el.value=''; }); const sex=$('#bs-sex'); if(sex) sex.value='male'; const um=$('#bs-unit-metric'), ui=$('#bs-unit-imperial'); if(um&&ui){ um.checked=true; ui.checked=false; } }catch(_){}}
 
+  // Guided capture (fallback)
+  async function guidedAnalyzeFallback(){
+    const q = document.getElementById('gc-quality'); const scoresEl = document.getElementById('gc-scores'); const summaryEl = document.getElementById('gc-summary');
+    if (!q || !scoresEl || !summaryEl) return;
+    q.textContent = 'Checking photos…'; scoresEl.innerHTML=''; summaryEl.innerHTML='';
+
+    const fF = document.getElementById('gc-front')?.files?.[0];
+    const fS = document.getElementById('gc-side')?.files?.[0];
+    const fB = document.getElementById('gc-back')?.files?.[0];
+    if (!fF && !fS && !fB){ q.textContent='Please add at least one photo.'; return; }
+
+    let det=null; try { det = await ensureFallbackDetector(); } catch { det=null; }
+
+    const checks=[]; const all=[];
+    for (const [name, file] of [['front',fF],['side',fS],['back',fB]]){
+      if (!file) continue;
+      const img = await new Promise(res=>{ const url=URL.createObjectURL(file); const i=new Image(); i.onload=()=>{ URL.revokeObjectURL(url); res(i); }; i.src=url; });
+      const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight; const ctx=c.getContext('2d'); ctx.drawImage(img,0,0);
+      const luma=(()=>{ const d=ctx.getImageData(0,0,c.width,c.height).data; let s=0; for(let i=0;i<d.length;i+=4){ s+=0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2]; } return s/(d.length/4)/255; })();
+      if (luma < 0.25) checks.push(`${name}: too dark`);
+      if (luma > 0.95) checks.push(`${name}: too bright`);
+      let kps=null;
+      if (det){ const poses=await det.estimatePoses(img,{maxPoses:1,flipHorizontal:false}); kps=poses[0]?.keypoints||[]; }
+      if (!kps || !kps.length){ kps = await estimateWithMediaPipe(img); }
+      if (!kps || !kps.length){ checks.push(`${name}: no person detected`); }
+      const ls = kps?.find(k=>k.name==='left_shoulder'||k.part==='left_shoulder');
+      const rs = kps?.find(k=>k.name==='right_shoulder'||k.part==='right_shoulder');
+      if (ls && rs){ const cx=((ls.x+rs.x)/2)/img.naturalWidth; if (cx<0.3||cx>0.7) checks.push(`${name}: please center your body`); }
+      all.push({ name, img, kps:kps||[] });
+    }
+    q.textContent = checks.length ? checks.join(' · ') : 'Looks good!';
+
+    const metricsList = all.filter(v=>v.kps.length).map(v=>computeMetricsFromKeypoints(v.kps));
+    if (!metricsList.length){ summaryEl.innerHTML='<p class="muted">No valid poses detected.</p>'; return; }
+    const fused = metricsList.reduce((acc,m)=>({ shoulderTilt:(acc.shoulderTilt||0)+m.shoulderTilt, hipTilt:(acc.hipTilt||0)+m.hipTilt, forwardHead:(acc.forwardHead||0)+m.forwardHead, torso:(acc.torso||0)+((m.symmetry?.torsoDiffPct)||0)}),{});
+    const n=metricsList.length; const fusedM={ shoulderTilt:fused.shoulderTilt/n, hipTilt:fused.hipTilt/n, forwardHead:fused.forwardHead/n, torsoDiffPct:fused.torso/n };
+
+    // Scores
+    const postureScore = Math.round(( Math.max(0,1-(Math.abs(fusedM.shoulderTilt)/2))*100 + Math.max(0,1-(Math.abs(fusedM.hipTilt)/2))*100 + Math.max(0,1-((fusedM.forwardHead*100)/5))*100 )/3);
+    const symmetryScore = Math.round(Math.max(0,1-((fusedM.torsoDiffPct*100)/5))*100);
+    function chip(label, s){ const cls = s>=85? 'good' : s>=65? 'warn':'bad'; return `<div class="score ${cls}"><span class="dot"></span><span>${label}: ${s}</span></div>`; }
+    scoresEl.innerHTML = chip('Posture score', postureScore) + ' ' + chip('Symmetry score', symmetryScore);
+
+    const shoulderStr = Math.abs(fusedM.shoulderTilt)<=2 ? 'Shoulders: level' : `Shoulders: ${fusedM.shoulderTilt.toFixed(1)}° high on one side`;
+    const hipStr = Math.abs(fusedM.hipTilt)<=2 ? 'Hips: level' : `Hips: ${fusedM.hipTilt.toFixed(1)}° high on one side`;
+    const headStr = (fusedM.forwardHead*100)<=5 ? 'Head: neutral' : `Head: ${Math.round(fusedM.forwardHead*100)}% forward`;
+    const torsoStr = (fusedM.torsoDiffPct*100)<=5 ? 'Torso: symmetric' : `Torso: ${Math.round(fusedM.torsoDiffPct*100)}% L/R difference`;
+    summaryEl.innerHTML = `<ul><li>${shoulderStr}</li><li>${hipStr}</li><li>${headStr}</li><li>${torsoStr}</li></ul>`;
+
+    const overlay = document.getElementById('gc-compare-toggle')?.checked; if (overlay && all[0]){ drawOverlayFallback(all[0].img, all[0].kps); }
+    try { summaryEl.scrollIntoView({ behavior:'smooth', block:'start' }); } catch {}
+  }
+
+  async function guidedSetBaselineFallback(){
+    const fF = document.getElementById('gc-front')?.files?.[0]; const fS = document.getElementById('gc-side')?.files?.[0]; const fB = document.getElementById('gc-back')?.files?.[0];
+    if (!fF && !fS && !fB){ alert('Add at least one photo.'); return; }
+    let det=null; try { det = await ensureFallbackDetector(); } catch { det=null; }
+    const metricsList=[];
+    for (const f of [fF,fS,fB].filter(Boolean)){
+      const img=await new Promise(res=>{ const url=URL.createObjectURL(f); const i=new Image(); i.onload=()=>{ URL.revokeObjectURL(url); res(i); }; i.src=url; });
+      let kps=null; if (det){ const poses=await det.estimatePoses(img,{maxPoses:1,flipHorizontal:false}); kps=poses[0]?.keypoints||[]; }
+      if (!kps || !kps.length){ kps=await estimateWithMediaPipe(img); }
+      if (kps && kps.length){ metricsList.push(computeMetricsFromKeypoints(kps)); }
+    }
+    if (!metricsList.length){ alert('No valid pose to set baseline.'); return; }
+    const fused = metricsList.reduce((acc,m)=>({ shoulderTilt:(acc.shoulderTilt||0)+m.shoulderTilt, hipTilt:(acc.hipTilt||0)+m.hipTilt, forwardHead:(acc.forwardHead||0)+m.forwardHead, torso:(acc.torso||0)+((m.symmetry?.torsoDiffPct)||0)}),{});
+    const n=metricsList.length; const fusedM={ shoulderTilt:fused.shoulderTilt/n, hipTilt:fused.hipTilt/n, forwardHead:fused.forwardHead/n, torsoDiffPct:fused.torso/n };
+    const now=new Date().toISOString(); try { localStorage.setItem('fitlife_baseline', JSON.stringify({ date: now, metrics: fusedM })); alert('Baseline saved.'); } catch { alert('Failed to save baseline.'); }
+  }
+
+  // Delegate guided capture CTAs if module not booted
+  document.addEventListener('click', (e)=>{
+    const t = e.target instanceof Element ? e.target : null; if (!t) return;
+    if (!window.__fitlife_scan_booted && t.closest('#gc-analyze-btn')){ e.preventDefault(); guidedAnalyzeFallback(); }
+    if (!window.__fitlife_scan_booted && t.closest('#gc-set-baseline')){ e.preventDefault(); guidedSetBaselineFallback(); }
+  });
+
   document.addEventListener('click', (e)=>{
     const t = e.target instanceof Element ? e.target : null;
     if (!t) return;
