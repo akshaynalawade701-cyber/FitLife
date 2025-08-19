@@ -253,6 +253,41 @@
             </div>
             <div class="annotated-wrap hidden"><canvas id="bs-annotated" class="annotated-canvas"></canvas></div>
             <div id="bs-results" class="grid cols-2 results"></div>
+
+            <div class="card" style="margin-top:12px">
+              <h3>Guided Capture (Beta)</h3>
+              <p class="muted">Add front, side, and back photos for better accuracy. We’ll check lighting and framing.</p>
+              <div class="grid cols-3">
+                <div>
+                  <label>Front photo
+                    <input id="gc-front" type="file" accept="image/*">
+                  </label>
+                  <div id="gc-front-preview" class="preview-grid"></div>
+                </div>
+                <div>
+                  <label>Side photo
+                    <input id="gc-side" type="file" accept="image/*">
+                  </label>
+                  <div id="gc-side-preview" class="preview-grid"></div>
+                </div>
+                <div>
+                  <label>Back photo
+                    <input id="gc-back" type="file" accept="image/*">
+                  </label>
+                  <div id="gc-back-preview" class="preview-grid"></div>
+                </div>
+              </div>
+              <div id="gc-quality" class="muted" style="margin-top:8px"></div>
+              <div class="row">
+                <button id="gc-analyze-btn" class="btn btn-primary">Run guided analysis</button>
+                <button id="gc-set-baseline" class="btn">Set as baseline</button>
+                <label class="row-inline" style="gap:6px">
+                  <input id="gc-compare-toggle" type="checkbox"> <span>Compare to baseline overlay</span>
+                </label>
+              </div>
+              <div id="gc-scores" class="grid cols-2" style="margin-top:8px"></div>
+              <div id="gc-summary" class="card" style="margin-top:8px"></div>
+            </div>
           </div>
           <p class="muted" style="margin-top:12px">Disclaimer: Estimates are for wellness guidance only and not medical advice.</p>
         </div>

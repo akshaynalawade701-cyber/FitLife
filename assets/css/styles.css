@@ -187,3 +187,12 @@ html[data-theme='dark'] {
 
 .annotated-wrap { margin-top: 12px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-elev); }
 .annotated-canvas { width: 100%; height: auto; min-height: 220px; display: block; background: #0b0d10; }
+
+.score { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); }
+.score .dot { width: 8px; height: 8px; border-radius: 50%; }
+.score.good .dot { background: #21d07a; }
+.score.warn .dot { background: #f3c623; }
+.score.bad .dot { background: #ff5d5d; }
+.score.good { color: #21d07a; border-color: color-mix(in oklab, #21d07a, var(--border)); }
+.score.warn { color: #f3c623; border-color: color-mix(in oklab, #f3c623, var(--border)); }
+.score.bad { color: #ff5d5d; border-color: color-mix(in oklab, #ff5d5d, var(--border)); }
