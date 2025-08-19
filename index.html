@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FitLife — Fitness, Workouts, and Nutrition</title>
+    <meta name="description" content="FitLife: calculators (BMI, BMR, TDEE), personalized workout builder, nutrition tracker, classes, pricing, trainers, and contact.">
+    <meta property="og:title" content="FitLife — Fitness, Workouts, and Nutrition">
+    <meta property="og:description" content="Calculators, workout builder, nutrition tracker, and more.">
+    <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%2307c0a2'/%3E%3Ctext x='50' y='62' font-size='56' text-anchor='middle' fill='white' font-family='Arial, sans-serif'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#home" aria-label="FitLife home">
+          <span class="brand-mark" aria-hidden="true">🏋️‍♀️</span>
+          <span class="brand-text">FitLife</span>
+        </a>
+        <button id="mobile-menu-btn" class="icon-btn" aria-label="Toggle menu" aria-expanded="false">☰</button>
+        <nav id="site-nav" class="site-nav" aria-label="Primary">
+          <a href="#calculators">Calculators</a>
+          <a href="#body-scan">Body Scan</a>
+          <a href="#workouts">Workouts</a>
+          <a href="#nutrition">Nutrition</a>
+          <a href="#classes">Classes</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#trainers">Trainers</a>
+          <a href="#contact">Contact</a>
+          <button id="theme-toggle" class="icon-btn" aria-label="Toggle color theme">🌓</button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="home">
+      <section class="hero">
+        <div class="container hero-inner">
+          <div class="hero-copy">
+            <h1>Build your best self.</h1>
+            <p>All-in-one fitness platform: smart calculators, a personalized workout builder, and a simple nutrition tracker — designed to help you stay consistent.</p>
+            <div class="hero-ctas">
+              <a class="btn btn-primary" href="#workouts">Build a plan</a>
+              <a class="btn btn-secondary" href="#calculators">Start with calculators</a>
+            </div>
+          </div>
+          <div class="hero-media" aria-hidden="true">
+            <div class="hero-card">
+              <div class="stat"><span>+150</span><small>exercises</small></div>
+              <div class="stat"><span>8–12</span><small>hypertrophy reps</small></div>
+              <div class="stat"><span>2K+</span><small>plans generated</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="features">
+        <div class="container">
+          <div class="section-header">
+            <h2>What you get</h2>
+            <p>Evidence-based tools that are easy to use, fast, and privacy-friendly.</p>
+          </div>
+          <div class="grid cols-3">
+            <div class="card">
+              <h3>Smart Calculators</h3>
+              <p>BMI, BMR, and TDEE with support for metric and imperial units.</p>
+            </div>
+            <div class="card">
+              <h3>Workout Builder</h3>
+              <p>Tailored plans by goal, experience, equipment, and schedule.</p>
+            </div>
+            <div class="card">
+              <h3>Nutrition Tracker</h3>
+              <p>Track calories and macros, set goals, and save locally.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="calculators" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <h2>Calculators</h2>
+            <p>Quick health metrics with unit flexibility.</p>
+          </div>
+          <div class="grid cols-2">
+            <div class="card">
+              <h3>BMI</h3>
+              <div class="row">
+                <label class="row-inline">
+                  <input type="radio" name="bmi-unit" id="bmi-unit-metric" value="metric" checked>
+                  <span>Metric</span>
+                </label>
+                <label class="row-inline">
+                  <input type="radio" name="bmi-unit" id="bmi-unit-imperial" value="imperial">
+                  <span>Imperial</span>
+                </label>
+              </div>
+              <div class="grid cols-2" id="bmi-metric-fields">
+                <label>Height (cm)
+                  <input id="bmi-height-cm" type="number" min="0" inputmode="decimal" placeholder="175">
+                </label>
+                <label>Weight (kg)
+                  <input id="bmi-weight" type="number" min="0" inputmode="decimal" placeholder="70">
+                </label>
+              </div>
+              <div class="grid cols-3 hidden" id="bmi-imperial-fields">
+                <label>Height (ft)
+                  <input id="bmi-feet" type="number" min="0" inputmode="decimal" placeholder="5">
+                </label>
+                <label>Height (in)
+                  <input id="bmi-inches" type="number" min="0" inputmode="decimal" placeholder="9">
+                </label>
+                <label>Weight (lb)
+                  <input id="bmi-pounds" type="number" min="0" inputmode="decimal" placeholder="154">
+                </label>
+              </div>
+              <div class="row">
+                <button id="bmi-calc-btn" class="btn btn-primary">Calculate BMI</button>
+              </div>
+              <output id="bmi-result" class="result" aria-live="polite"></output>
+            </div>
+
+            <div class="card">
+              <h3>BMR & TDEE</h3>
+              <div class="grid cols-3">
+                <label>Sex
+                  <select id="bmr-sex">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </label>
+                <label>Age
+                  <input id="bmr-age" type="number" min="0" inputmode="numeric" placeholder="30">
+                </label>
+                <label>Activity
+                  <select id="activity-level">
+                    <option value="1.2">Sedentary</option>
+                    <option value="1.375">Light</option>
+                    <option value="1.55">Moderate</option>
+                    <option value="1.725">Active</option>
+                    <option value="1.9">Very active</option>
+                  </select>
+                </label>
+              </div>
+              <div class="row">
+                <label class="row-inline">
+                  <input type="radio" name="bmr-unit" id="bmr-unit-metric" value="metric" checked>
+                  <span>Metric</span>
+                </label>
+                <label class="row-inline">
+                  <input type="radio" name="bmr-unit" id="bmr-unit-imperial" value="imperial">
+                  <span>Imperial</span>
+                </label>
+              </div>
+              <div class="grid cols-2" id="bmr-metric-fields">
+                <label>Height (cm)
+                  <input id="bmr-height-cm" type="number" min="0" inputmode="decimal" placeholder="175">
+                </label>
+                <label>Weight (kg)
+                  <input id="bmr-weight-kg" type="number" min="0" inputmode="decimal" placeholder="70">
+                </label>
+              </div>
+              <div class="grid cols-3 hidden" id="bmr-imperial-fields">
+                <label>Height (ft)
+                  <input id="bmr-feet" type="number" min="0" inputmode="decimal" placeholder="5">
+                </label>
+                <label>Height (in)
+                  <input id="bmr-inches" type="number" min="0" inputmode="decimal" placeholder="9">
+                </label>
+                <label>Weight (lb)
+                  <input id="bmr-pounds" type="number" min="0" inputmode="decimal" placeholder="154">
+                </label>
+              </div>
+              <div class="row">
+                <button id="bmr-calc-btn" class="btn btn-primary">Calculate BMR/TDEE</button>
+              </div>
+              <div class="result-stack">
+                <output id="bmr-result" class="result" aria-live="polite"></output>
+                <output id="tdee-result" class="result" aria-live="polite"></output>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="body-scan" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Body Scan <span class="badge">Beta</span></h2>
+            <p>Upload front/side/back photos or a short video. Analysis runs locally in your browser.</p>
+          </div>
+          <div class="card">
+            <div class="grid cols-2">
+              <div>
+                <label>Photo upload (multiple angles)
+                  <input id="bs-images" type="file" accept="image/*" multiple>
+                </label>
+                <p class="muted">Tip: include front, side, and back standing photos.</p>
+                <div id="bs-previews" class="preview-grid"></div>
+              </div>
+              <div>
+                <label>Upload videos
+                  <input id="bs-video" type="file" accept="video/*" multiple>
+                </label>
+                <video id="bs-video-el" class="hidden" playsinline></video>
+                <div id="bs-video-previews" class="preview-grid" style="margin-top:8px"></div>
+              </div>
+            </div>
+
+            <div class="grid cols-4" style="margin-top:12px">
+              <label>Sex
+                <select id="bs-sex">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </label>
+              <label>Age
+                <input id="bs-age" type="number" min="0" inputmode="numeric" placeholder="30">
+              </label>
+              <label class="row-inline" style="gap:6px">Units
+                <label class="row-inline"><input type="radio" name="bs-unit" id="bs-unit-metric" value="metric" checked><span>Metric</span></label>
+                <label class="row-inline"><input type="radio" name="bs-unit" id="bs-unit-imperial" value="imperial"><span>Imperial</span></label>
+              </label>
+            </div>
+            <div class="grid cols-4" id="bs-metric-fields">
+              <label>Height (cm)
+                <input id="bs-height-cm" type="number" min="0" inputmode="decimal" placeholder="175">
+              </label>
+              <label>Weight (kg)
+                <input id="bs-weight-kg" type="number" min="0" inputmode="decimal" placeholder="70">
+              </label>
+            </div>
+            <div class="grid cols-4 hidden" id="bs-imperial-fields">
+              <label>Height (ft)
+                <input id="bs-feet" type="number" min="0" inputmode="decimal" placeholder="5">
+              </label>
+              <label>Height (in)
+                <input id="bs-inches" type="number" min="0" inputmode="decimal" placeholder="9">
+              </label>
+              <label>Weight (lb)
+                <input id="bs-pounds" type="number" min="0" inputmode="decimal" placeholder="154">
+              </label>
+            </div>
+
+            <div class="row">
+              <button id="bs-import-btn" class="btn">Import from calculators</button>
+              <button id="bs-analyze-btn" class="btn btn-primary">Analyze</button>
+              <button id="bs-clear-btn" class="btn btn-ghost">Clear</button>
+              <button id="bs-download-report" class="btn">Download report</button>
+              <span id="bs-status" class="muted" aria-live="polite"></span>
+            </div>
+            <div class="annotated-wrap hidden"><canvas id="bs-annotated" class="annotated-canvas"></canvas></div>
+            <div id="bs-results" class="grid cols-2 results"></div>
+          </div>
+          <p class="muted" style="margin-top:12px">Disclaimer: Estimates are for wellness guidance only and not medical advice.</p>
+        </div>
+      </section>
+
+      <section id="workouts" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Workout Builder</h2>
+            <p>Create a plan tailored to you.</p>
+          </div>
+
+          <div class="card">
+            <div class="grid cols-4">
+              <label>Goal
+                <select id="wb-goal">
+                  <option value="muscle">Build muscle</option>
+                  <option value="fatloss">Fat loss</option>
+                  <option value="endurance">Endurance</option>
+                  <option value="general">General fitness</option>
+                </select>
+              </label>
+              <label>Experience
+                <select id="wb-experience">
+                  <option>Beginner</option>
+                  <option>Intermediate</option>
+                  <option>Advanced</option>
+                </select>
+              </label>
+              <label>Days / week
+                <select id="wb-days">
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </label>
+              <label>Equipment
+                <select id="wb-equipment">
+                  <option value="bodyweight">Bodyweight</option>
+                  <option value="dumbbells">Dumbbells</option>
+                  <option value="gym">Full gym</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <button id="wb-generate-btn" class="btn btn-primary">Generate Plan</button>
+              <button id="wb-save-btn" class="btn">Save</button>
+              <button id="wb-print-btn" class="btn">Print</button>
+              <button id="wb-reset-btn" class="btn btn-ghost">Reset</button>
+            </div>
+            <div id="wb-plan-container" class="plan"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="nutrition" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <h2>Nutrition Tracker</h2>
+            <p>Set goals and log your meals. Data stays in your browser.</p>
+          </div>
+
+          <div class="card">
+            <div class="grid cols-5">
+              <label>Date
+                <input id="nt-date" type="date">
+              </label>
+              <label>Calorie goal
+                <input id="nt-calorie-goal" type="number" min="0" inputmode="numeric" placeholder="2200">
+              </label>
+              <label>Protein (g)
+                <input id="nt-protein-goal" type="number" min="0" inputmode="numeric" placeholder="160">
+              </label>
+              <label>Carbs (g)
+                <input id="nt-carbs-goal" type="number" min="0" inputmode="numeric" placeholder="230">
+              </label>
+              <label>Fat (g)
+                <input id="nt-fat-goal" type="number" min="0" inputmode="numeric" placeholder="70">
+              </label>
+            </div>
+            <div class="row">
+              <button id="nt-save-goals-btn" class="btn btn-primary">Save goals</button>
+              <button id="nt-reset-day-btn" class="btn btn-ghost">Reset day</button>
+              <button id="nt-export-btn" class="btn">Export</button>
+              <label class="btn file-btn">
+                Import
+                <input id="nt-import-input" type="file" accept="application/json">
+              </label>
+            </div>
+
+            <div class="progress">
+              <div class="progress-row">
+                <span>Calories</span>
+                <div class="bar"><span id="nt-calories-bar" style="width:0%"></span></div>
+                <span id="nt-total-calories">0 / 0</span>
+              </div>
+              <div class="progress-row">
+                <span>Protein</span>
+                <div class="bar"><span id="nt-protein-bar" style="width:0%"></span></div>
+                <span id="nt-total-protein">0g / 0g</span>
+              </div>
+              <div class="progress-row">
+                <span>Carbs</span>
+                <div class="bar"><span id="nt-carbs-bar" style="width:0%"></span></div>
+                <span id="nt-total-carbs">0g / 0g</span>
+              </div>
+              <div class="progress-row">
+                <span>Fat</span>
+                <div class="bar"><span id="nt-fat-bar" style="width:0%"></span></div>
+                <span id="nt-total-fat">0g / 0g</span>
+              </div>
+            </div>
+
+            <div class="grid cols-5">
+              <label>Meal name
+                <input id="nt-meal-name" type="text" placeholder="Chicken & rice">
+              </label>
+              <label>Calories
+                <input id="nt-calories" type="number" min="0" inputmode="numeric" placeholder="600">
+              </label>
+              <label>Protein (g)
+                <input id="nt-protein" type="number" min="0" inputmode="numeric" placeholder="45">
+              </label>
+              <label>Carbs (g)
+                <input id="nt-carbs" type="number" min="0" inputmode="numeric" placeholder="70">
+              </label>
+              <label>Fat (g)
+                <input id="nt-fat" type="number" min="0" inputmode="numeric" placeholder="15">
+              </label>
+            </div>
+            <div class="row">
+              <button id="nt-add-meal-btn" class="btn btn-primary">Add meal</button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Meal</th>
+                    <th>Calories</th>
+                    <th>Protein</th>
+                    <th>Carbs</th>
+                    <th>Fat</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="nt-meals-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="classes" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Classes & Schedule</h2>
+            <p>Drop in or subscribe — flexible options.</p>
+          </div>
+          <div class="grid cols-3">
+            <div class="card">
+              <h3>Strength 101</h3>
+              <p>Mon/Wed/Fri · 6:30 PM</p>
+              <p class="muted">Coach: Alex</p>
+              <button class="btn">Book</button>
+            </div>
+            <div class="card">
+              <h3>HIIT Express</h3>
+              <p>Tue/Thu · 7:00 AM</p>
+              <p class="muted">Coach: Jamie</p>
+              <button class="btn">Book</button>
+            </div>
+            <div class="card">
+              <h3>Mobility Flow</h3>
+              <p>Sat · 10:00 AM</p>
+              <p class="muted">Coach: Priya</p>
+              <button class="btn">Book</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <h2>Pricing</h2>
+            <p>Start free. Upgrade anytime.</p>
+          </div>
+          <div class="grid cols-3 pricing">
+            <div class="card">
+              <h3>Starter</h3>
+              <p class="price"><span>$0</span>/mo</p>
+              <ul>
+                <li>Calculators</li>
+                <li>Workout builder</li>
+                <li>Nutrition tracker</li>
+              </ul>
+              <button class="btn btn-primary">Get started</button>
+            </div>
+            <div class="card highlight">
+              <h3>Plus</h3>
+              <p class="price"><span>$9</span>/mo</p>
+              <ul>
+                <li>Everything in Starter</li>
+                <li>Save multiple plans</li>
+                <li>Custom class schedules</li>
+              </ul>
+              <button class="btn btn-primary">Choose Plus</button>
+            </div>
+            <div class="card">
+              <h3>Pro</h3>
+              <p class="price"><span>$19</span>/mo</p>
+              <ul>
+                <li>Everything in Plus</li>
+                <li>Priority support</li>
+                <li>Coach chat (beta)</li>
+              </ul>
+              <button class="btn btn-primary">Go Pro</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="trainers" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Meet the trainers</h2>
+            <p>Certified, experienced, and kind.</p>
+          </div>
+          <div class="grid cols-3">
+            <div class="card person">
+              <div class="avatar" aria-hidden="true">A</div>
+              <h3>Alex Carter</h3>
+              <p class="muted">CPT · Strength</p>
+              <p>Progressive overload specialist focused on compound movements and longevity.</p>
+            </div>
+            <div class="card person">
+              <div class="avatar" aria-hidden="true">J</div>
+              <h3>Jamie Rivera</h3>
+              <p class="muted">CPT · Conditioning</p>
+              <p>Fun, effective metabolic conditioning with proper mechanics and pacing.</p>
+            </div>
+            <div class="card person">
+              <div class="avatar" aria-hidden="true">P</div>
+              <h3>Priya Shah</h3>
+              <p class="muted">RMT · Mobility</p>
+              <p>Mobility and tissue quality work to move better, lift better, and feel better.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt">
+        <div class="container">
+          <div class="grid cols-2">
+            <div>
+              <h3>Testimonials</h3>
+              <div class="card quote">
+                <p>“Everything I need in one place. The workout builder gave me structure I could stick to.”</p>
+                <p class="muted">— Casey</p>
+              </div>
+              <div class="card quote">
+                <p>“The nutrition tracker is simple and fast. I actually use it.”</p>
+                <p class="muted">— Taylor</p>
+              </div>
+            </div>
+            <div>
+              <h3>FAQ</h3>
+              <details class="card">
+                <summary>Is my data private?</summary>
+                <p>Yes. Everything is stored locally in your browser. Export anytime.</p>
+              </details>
+              <details class="card">
+                <summary>Can I print my plan?</summary>
+                <p>Yes. Use the Print button in the Workout Builder.</p>
+              </details>
+              <details class="card">
+                <summary>How do I pick a goal?</summary>
+                <p>Choose Hypertrophy (build muscle) if you want to get stronger and bigger; Fat Loss to cut; Endurance for longer sets and conditioning.</p>
+              </details>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Contact</h2>
+            <p>Questions or feedback? We would love to hear from you.</p>
+          </div>
+          <form id="contact-form" class="card" novalidate>
+            <div class="grid cols-2">
+              <label>Name
+                <input id="cf-name" type="text" required placeholder="Your name">
+              </label>
+              <label>Email
+                <input id="cf-email" type="email" required placeholder="you@example.com">
+              </label>
+            </div>
+            <label>Message
+              <textarea id="cf-message" rows="5" required placeholder="How can we help?"></textarea>
+            </label>
+            <div class="row">
+              <button class="btn btn-primary" type="submit">Send</button>
+              <span id="cf-status" class="muted" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© <span id="year"></span> FitLife. Train smart, recover hard.</p>
+        <nav class="footer-nav" aria-label="Legal">
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>window.__fitlife_scan_booted = false;</script>
+    <script src="assets/js/main.js" defer></script>
+    <script src="assets/js/scan-fallback.js" defer></script>
+    <script type="module" src="assets/js/scan.js"></script>
+  </body>
+</html>
