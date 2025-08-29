@@ -1,7 +1,8 @@
 // Body Scan (Beta) — Client-side posture analysis using TensorFlow.js
 // This module runs locally in the browser. No files are uploaded.
 
-window.__fitlife_scan_booted = true;
+// Mark booted only after successful init; fallback relies on this flag
+window.__fitlife_scan_booted = false;
 
 import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.13.0/dist/tf-core.esm.js';
 import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.13.0/dist/tf-backend-webgl.esm.js';
@@ -32,6 +33,8 @@ async function ensureDetector() {
       enableSmoothing: true
     });
     setStatus(`Model ready (${tf.getBackend()})`);
+    // Model initialized successfully; mark module as booted so fallback defers
+    window.__fitlife_scan_booted = true;
     return detector;
   } catch (e) {
     console.warn('WebGL backend failed, falling back to WASM', e);
@@ -46,6 +49,7 @@ async function ensureDetector() {
         enableSmoothing: true
       });
       setStatus(`Model ready (${tf.getBackend()})`);
+      window.__fitlife_scan_booted = true;
       return detector;
     } catch (err) {
       console.error('Failed to initialize detector with WASM backend', err);
