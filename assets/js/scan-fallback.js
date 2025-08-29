@@ -120,19 +120,8 @@
   }
 
   async function ensureFallbackDetector(){
-    if (window.__fitlife_fallback_detector) return window.__fitlife_fallback_detector;
-    if (window.__fitlife_scan_booted) throw new Error('Module already booted');
-    try {
-      window.__fitlife_fallback_detector = await createDetectorMoveNet();
-    } catch (_moveErr) {
-      try {
-        window.__fitlife_fallback_detector = await createDetectorBlazePose();
-      } catch (err) {
-        setStatus('Model load failed');
-        throw err;
-      }
-    }
-    return window.__fitlife_fallback_detector;
+    // Disable TFJS-based detectors due to CDN 404/CORS; use MediaPipe only
+    return null;
   }
 
   function lineTiltDegrees(p1, p2){ const dy = p2.y - p1.y, dx = p2.x - p1.x; if (dx === 0) return 90; return Math.atan2(dy, dx) * (180/Math.PI); }
@@ -267,9 +256,9 @@
 
       let kps = null; let baseImage = null;
       if(hasImg){
-        for(const f of imgFiles){ const url=URL.createObjectURL(f); const img=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; }); if (det) { const poses=await det.estimatePoses(img,{maxPoses:1,flipHorizontal:false}); if (poses[0]?.keypoints) { kps = poses[0].keypoints; baseImage = img; URL.revokeObjectURL(url); break; } } else { const mpKps = await estimateWithMediaPipe(img); if (mpKps && mpKps.length) { kps = mpKps; baseImage = img; URL.revokeObjectURL(url); break; } } URL.revokeObjectURL(url); }
+        for(const f of imgFiles){ const url=URL.createObjectURL(f); const img=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; }); const mpKps = await estimateWithMediaPipe(img); if (mpKps && mpKps.length) { kps = mpKps; baseImage = img; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
       } else if (hasVid){
-        for (const f of vidFiles){ const url=URL.createObjectURL(f); const v=$('#bs-video-el'); await new Promise(res=>{ v.onloadeddata=()=>res(); v.src=url; }); try{ await v.play(); }catch{}; v.pause(); if (v.videoWidth===0||v.videoHeight===0){ URL.revokeObjectURL(url); continue; } if (det){ const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight; const ctx=c.getContext('2d'); ctx.drawImage(v,0,0,c.width,c.height); const poses=await det.estimatePoses(c,{maxPoses:1,flipHorizontal:false}); if (poses[0]?.keypoints) { kps=poses[0].keypoints; baseImage=c; URL.revokeObjectURL(url); break; } } else { const mpKps=await estimateWithMediaPipe(v); if (mpKps && mpKps.length) { kps=mpKps; baseImage=v; URL.revokeObjectURL(url); break; } } URL.revokeObjectURL(url); }
+        for (const f of vidFiles){ const url=URL.createObjectURL(f); const v=$('#bs-video-el'); await new Promise(res=>{ v.onloadeddata=()=>res(); v.src=url; }); try{ await v.play(); }catch{}; v.pause(); if (v.videoWidth===0||v.videoHeight===0){ URL.revokeObjectURL(url); continue; } const mpKps=await estimateWithMediaPipe(v); if (mpKps && mpKps.length) { kps=mpKps; baseImage=v; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
       }
 
       if(!kps){ setStatus('No person detected. Try a clearer, well-lit image.'); return; }
