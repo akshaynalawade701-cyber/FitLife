@@ -257,12 +257,16 @@
     if (ls && lh && rs && rh && m && m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) { const mt = mid(ms||ls,mh||lh)||{x:(w*0.05),y:(h*0.5)}; drawBadge(mt.x, mt.y, `Torso L/R: ${Math.round(m.symmetry.torsoDiffPct*100)}% (≤ 5%)`); }
     if (limb && Number.isFinite(limb.armDiff)) { drawBadge(w*0.04, h*0.08, `Arms diff: ${Math.round(limb.armDiff*100)}% (≤ 10%)`); }
     if (limb && Number.isFinite(limb.legDiff)) { drawBadge(w*0.04, h*0.08 + Math.max(28, h/20), `Legs diff: ${Math.round(limb.legDiff*100)}% (≤ 10%)`); }
-    // Overlay scores (if provided)
+    // Overlay scores and human-readable summary (top-right)
     const scores = options && options.scores || null;
-    const summaries = options && options.summaries || [];
     let y = 20;
-    if (scores){ drawCornerText(w - 210, y, `Posture score: ${scores.posture}`); y += 18; drawCornerText(w - 210, y, `Symmetry score: ${scores.symmetry}`); y += 22; }
-    summaries.forEach(s => { drawCornerText(w - 210, y, s); y += 18; });
+    if (scores){ drawCornerText(w - 260, y, `Posture score: ${scores.posture}`); y += 18; drawCornerText(w - 260, y, `Symmetry score: ${scores.symmetry}`); y += 22; }
+    const human=[];
+    const sTilt = (metrics && Number.isFinite(metrics.shoulderTilt)) ? (metrics.shoulderTilt<=2?'Shoulders level':`Shoulders: ${metrics.shoulderTilt.toFixed(1)}° tilt`) : null;
+    const hTilt = (metrics && Number.isFinite(metrics.hipTilt)) ? (metrics.hipTilt<=2?'Hips level':`Hips: ${metrics.hipTilt.toFixed(1)}° tilt`) : null;
+    const fh = (metrics && Number.isFinite(metrics.forwardHead)) ? ((metrics.forwardHead*100)<=5?'Head neutral':`Head: ${Math.round(metrics.forwardHead*100)}% forward`) : null;
+    const torso = (metrics && metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) ? ((metrics.symmetry.torsoDiffPct*100)<=5?'Torso symmetric':`Torso: ${Math.round(metrics.symmetry.torsoDiffPct*100)}% L/R diff`) : null;
+    [sTilt,hTilt,fh,torso].filter(Boolean).forEach(s=>{ drawCornerText(w-260, y, s); y+=18; });
 
     try { canvas.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
   }
@@ -389,7 +393,14 @@
       results.appendChild(explain);
       try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
-      setStatus('Done · ' + `Shoulder ${fmtDeg(m.shoulderTilt)} · Hip ${fmtDeg(m.hipTilt)} · FHP ${fmtPct(m.forwardHead)} · Torso ${fmtPct(m.symmetry?.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
+      const flags=[];
+      if (Number.isFinite(m.shoulderTilt)) flags.push(`Shoulders ${m.shoulderTilt<=2?'level':m.shoulderTilt.toFixed(1)+'° tilt'}`);
+      if (Number.isFinite(m.hipTilt)) flags.push(`Hips ${m.hipTilt<=2?'level':m.hipTilt.toFixed(1)+'° tilt'}`);
+      if (Number.isFinite(m.forwardHead)) flags.push(`Head ${Math.round(m.forwardHead*100)<=5?'neutral':Math.round(m.forwardHead*100)+'% forward'}`);
+      if (m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) flags.push(`Torso ${Math.round(m.symmetry.torsoDiffPct*100)<=5?'symmetric':Math.round(m.symmetry.torsoDiffPct*100)+'% L/R diff'}`);
+      if (limb && Number.isFinite(limb.armDiff)) flags.push(`Arms ${Math.round(limb.armDiff*100)<=10?'balanced':Math.round(limb.armDiff*100)+'% diff'}`);
+      if (limb && Number.isFinite(limb.legDiff)) flags.push(`Legs ${Math.round(limb.legDiff*100)<=10?'balanced':Math.round(limb.legDiff*100)+'% diff'}`);
+      setStatus('Summary · ' + flags.join(' · '));
     }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
   }
 
