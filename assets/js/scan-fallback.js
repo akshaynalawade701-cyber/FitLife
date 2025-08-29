@@ -270,10 +270,11 @@
     let y = 20;
     if (scores){ drawCornerText(w - 260, y, `Posture score: ${scores.posture}`); y += 18; drawCornerText(w - 260, y, `Symmetry score: ${scores.symmetry}`); y += 22; }
     const human=[];
-    const sTilt = (metrics && Number.isFinite(metrics.shoulderTilt)) ? (metrics.shoulderTilt<=2?'Shoulders level':`Shoulders: ${metrics.shoulderTilt.toFixed(1)}° tilt`) : null;
-    const hTilt = (metrics && Number.isFinite(metrics.hipTilt)) ? (metrics.hipTilt<=2?'Hips level':`Hips: ${metrics.hipTilt.toFixed(1)}° tilt`) : null;
-    const fh = (metrics && Number.isFinite(metrics.forwardHead)) ? ((metrics.forwardHead*100)<=5?'Head neutral':`Head: ${Math.round(metrics.forwardHead*100)}% forward`) : null;
-    const torso = (metrics && metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) ? ((metrics.symmetry.torsoDiffPct*100)<=5?'Torso symmetric':`Torso: ${Math.round(metrics.symmetry.torsoDiffPct*100)}% L/R diff`) : null;
+    const mm = window.__fitlife_last_metrics || {};
+    const sTilt = (Number.isFinite(mm.shoulderTilt)) ? (mm.shoulderTilt<=2?'Shoulders level':`Shoulders: ${mm.shoulderTilt.toFixed(1)}° tilt`) : null;
+    const hTilt = (Number.isFinite(mm.hipTilt)) ? (mm.hipTilt<=2?'Hips level':`Hips: ${mm.hipTilt.toFixed(1)}° tilt`) : null;
+    const fh = (Number.isFinite(mm.forwardHead)) ? ((mm.forwardHead*100)<=5?'Head neutral':`Head: ${Math.round(mm.forwardHead*100)}% forward`) : null;
+    const torso = (mm.symmetry && Number.isFinite(mm.symmetry.torsoDiffPct)) ? ((mm.symmetry.torsoDiffPct*100)<=5?'Torso symmetric':`Torso: ${Math.round(mm.symmetry.torsoDiffPct*100)}% L/R diff`) : null;
     [sTilt,hTilt,fh,torso].filter(Boolean).forEach(s=>{ drawCornerText(w-260, y, s); y+=18; });
 
     try { canvas.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
