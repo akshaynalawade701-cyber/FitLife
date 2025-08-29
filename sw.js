@@ -1,5 +1,5 @@
 /* FitLife Service Worker */
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 const CACHE_NAME = `fitlife-cache-${CACHE_VERSION}`;
 const ASSETS_TO_PRECACHE = [
   './',
@@ -8,8 +8,8 @@ const ASSETS_TO_PRECACHE = [
   './terms.html',
   './assets/css/styles.css?v=10',
   './assets/js/main.js?v=10',
-  './assets/js/scan-fallback.js?v=11',
-  './assets/js/scan.js?v=11',
+  './assets/js/scan-fallback.js?v=12',
+  './assets/js/scan.js?v=12',
 ];
 
 self.addEventListener('install', (event) => {

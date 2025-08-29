@@ -719,19 +719,13 @@ async function analyzeAndRender() {
     results.appendChild(explain);
     try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
-    // Human-readable summary with side-specific info
-    const ls = key(kps,'left_shoulder'), rs = key(kps,'right_shoulder');
-    const lh = key(kps,'left_hip'), rh = key(kps,'right_hip');
-    const shoulderSide = (ls&&rs) ? (ls.y < rs.y ? 'left' : rs.y < ls.y ? 'right' : 'level') : 'level';
-    const hipSide = (lh&&rh) ? (lh.y < rh.y ? 'left' : rh.y < lh.y ? 'right' : 'level') : 'level';
-    const parts = [];
-    if (Number.isFinite(metrics.shoulderTilt)) parts.push(shoulderSide==='level' ? 'Shoulders: level' : `Shoulders: ${shoulderSide} higher by ${metrics.shoulderTilt.toFixed(1)}°`);
-    if (Number.isFinite(metrics.hipTilt)) parts.push(hipSide==='level' ? 'Hips: level' : `Hips: ${hipSide} higher by ${metrics.hipTilt.toFixed(1)}°`);
-    if (Number.isFinite(metrics.forwardHead)) parts.push((metrics.forwardHead*100)<=5 ? 'Head: neutral' : `Head: ${Math.round(metrics.forwardHead*100)}% forward`);
-    if (metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) parts.push((metrics.symmetry.torsoDiffPct*100)<=5 ? 'Torso: symmetric' : `Torso: ${Math.round(metrics.symmetry.torsoDiffPct*100)}% L/R difference`);
-    if (limb && Number.isFinite(limb.armDiff)) parts.push((limb.armDiff*100)<=10 ? 'Arms: balanced' : `Arms: ${Math.round(limb.armDiff*100)}% diff`);
-    if (limb && Number.isFinite(limb.legDiff)) parts.push((limb.legDiff*100)<=10 ? 'Legs: balanced' : `Legs: ${Math.round(limb.legDiff*100)}% diff`);
-    setStatus(parts.join(' · '));
+    const sTilt = Number.isFinite(metrics.shoulderTilt) ? metrics.shoulderTilt.toFixed(1)+'°' : '—';
+    const hTilt = Number.isFinite(metrics.hipTilt) ? metrics.hipTilt.toFixed(1)+'°' : '—';
+    const headFwd = Number.isFinite(metrics.forwardHead) ? Math.round(metrics.forwardHead*100)+'%' : '—';
+    const torso = (metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) ? Math.round(metrics.symmetry.torsoDiffPct*100)+'%' : '—';
+    const arms = (limb && Number.isFinite(limb.armDiff)) ? Math.round(limb.armDiff*100)+'%' : '—';
+    const legs = (limb && Number.isFinite(limb.legDiff)) ? Math.round(limb.legDiff*100)+'%' : '—';
+    setStatus(`Done · Shoulder ${sTilt} · Hip ${hTilt} · FHP ${headFwd} · Torso ${torso} · Arms ${arms} · Legs ${legs}`);
   } catch (err) {
     console.error(err);
     setStatus('Analysis failed. Please try different photos.');

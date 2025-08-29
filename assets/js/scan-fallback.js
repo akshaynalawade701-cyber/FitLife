@@ -402,22 +402,7 @@
       results.appendChild(explain);
       try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
-      const ls=key(kps,'left_shoulder'), rs=key(kps,'right_shoulder');
-      const lh=key(kps,'left_hip'), rh=key(kps,'right_hip');
-      const flags=[];
-      if (Number.isFinite(m.shoulderTilt)){
-        const side = (ls&&rs) ? (ls.y < rs.y ? 'left' : rs.y < ls.y ? 'right' : 'level') : 'level';
-        flags.push(side==='level' ? 'Shoulders level' : `Shoulders: ${side} higher by ${m.shoulderTilt.toFixed(1)}°`);
-      }
-      if (Number.isFinite(m.hipTilt)){
-        const side = (lh&&rh) ? (lh.y < rh.y ? 'left' : rh.y < lh.y ? 'right' : 'level') : 'level';
-        flags.push(side==='level' ? 'Hips level' : `Hips: ${side} higher by ${m.hipTilt.toFixed(1)}°`);
-      }
-      if (Number.isFinite(m.forwardHead)) flags.push(`Head ${Math.round(m.forwardHead*100)<=5?'neutral':Math.round(m.forwardHead*100)+'% forward'}`);
-      if (m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) flags.push(`Torso ${Math.round(m.symmetry.torsoDiffPct*100)<=5?'symmetric':Math.round(m.symmetry.torsoDiffPct*100)+'% L/R diff'}`);
-      if (limb && Number.isFinite(limb.armDiff)) flags.push(`Arms ${Math.round(limb.armDiff*100)<=10?'balanced':Math.round(limb.armDiff*100)+'% diff'}`);
-      if (limb && Number.isFinite(limb.legDiff)) flags.push(`Legs ${Math.round(limb.legDiff*100)<=10?'balanced':Math.round(limb.legDiff*100)+'% diff'}`);
-      setStatus('Summary · ' + flags.join(' · '));
+      setStatus('Done · ' + `Shoulder ${fmtDeg(m.shoulderTilt)} · Hip ${fmtDeg(m.hipTilt)} · FHP ${fmtPct(m.forwardHead)} · Torso ${fmtPct(m.symmetry?.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
     }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
   }
 
