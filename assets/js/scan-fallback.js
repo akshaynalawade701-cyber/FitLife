@@ -251,8 +251,16 @@
     ctx.restore();
     const m = window.__fitlife_last_metrics;
     const limb = window.__fitlife_last_limb;
-    if (ls && rs && ms && m && Number.isFinite(m.shoulderTilt)) { ctx.strokeStyle='rgba(255,255,0,0.9)'; ctx.beginPath(); ctx.moveTo(ls.x,ls.y); ctx.lineTo(rs.x,rs.y); ctx.stroke(); drawBadge(ms.x, ms.y-28, `Shoulder: ${m.shoulderTilt.toFixed(1)}° (≤ 2°)`); }
-    if (lh && rh && mh && m && Number.isFinite(m.hipTilt)) { ctx.strokeStyle='rgba(255,140,0,0.9)'; ctx.beginPath(); ctx.moveTo(lh.x,lh.y); ctx.lineTo(rh.x,rh.y); ctx.stroke(); drawBadge(mh.x, mh.y+8, `Hip: ${m.hipTilt.toFixed(1)}° (≤ 2°)`); }
+    if (ls && rs && ms && m && Number.isFinite(m.shoulderTilt)) {
+      const side = ls.y < rs.y ? 'Left higher' : rs.y < ls.y ? 'Right higher' : 'Level';
+      ctx.strokeStyle='rgba(255,255,0,0.9)'; ctx.beginPath(); ctx.moveTo(ls.x,ls.y); ctx.lineTo(rs.x,rs.y); ctx.stroke();
+      drawBadge(ms.x, ms.y-28, side==='Level' ? `Shoulders: level (≤ 2°)` : `Shoulders: ${side} by ${m.shoulderTilt.toFixed(1)}°`);
+    }
+    if (lh && rh && mh && m && Number.isFinite(m.hipTilt)) {
+      const sideH = lh.y < rh.y ? 'Left higher' : rh.y < lh.y ? 'Right higher' : 'Level';
+      ctx.strokeStyle='rgba(255,140,0,0.9)'; ctx.beginPath(); ctx.moveTo(lh.x,lh.y); ctx.lineTo(rh.x,rh.y); ctx.stroke();
+      drawBadge(mh.x, mh.y+8, sideH==='Level' ? `Hips: level (≤ 2°)` : `Hips: ${sideH} by ${m.hipTilt.toFixed(1)}°`);
+    }
     if (ms && nose && m && Number.isFinite(m.forwardHead)) { ctx.strokeStyle='rgba(173,216,230,0.9)'; ctx.beginPath(); ctx.moveTo(nose.x,nose.y); ctx.lineTo(ms.x,nose.y); ctx.stroke(); drawBadge(nose.x, Math.max(4, nose.y-24), `FHP: ${Math.round(m.forwardHead*100)}% (≤ 5%)`); }
     if (ls && lh && rs && rh && m && m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) { const mt = mid(ms||ls,mh||lh)||{x:(w*0.05),y:(h*0.5)}; drawBadge(mt.x, mt.y, `Torso L/R: ${Math.round(m.symmetry.torsoDiffPct*100)}% (≤ 5%)`); }
     if (limb && Number.isFinite(limb.armDiff)) { drawBadge(w*0.04, h*0.08, `Arms diff: ${Math.round(limb.armDiff*100)}% (≤ 10%)`); }
@@ -393,9 +401,17 @@
       results.appendChild(explain);
       try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
+      const ls=key(kps,'left_shoulder'), rs=key(kps,'right_shoulder');
+      const lh=key(kps,'left_hip'), rh=key(kps,'right_hip');
       const flags=[];
-      if (Number.isFinite(m.shoulderTilt)) flags.push(`Shoulders ${m.shoulderTilt<=2?'level':m.shoulderTilt.toFixed(1)+'° tilt'}`);
-      if (Number.isFinite(m.hipTilt)) flags.push(`Hips ${m.hipTilt<=2?'level':m.hipTilt.toFixed(1)+'° tilt'}`);
+      if (Number.isFinite(m.shoulderTilt)){
+        const side = (ls&&rs) ? (ls.y < rs.y ? 'left' : rs.y < ls.y ? 'right' : 'level') : 'level';
+        flags.push(side==='level' ? 'Shoulders level' : `Shoulders: ${side} higher by ${m.shoulderTilt.toFixed(1)}°`);
+      }
+      if (Number.isFinite(m.hipTilt)){
+        const side = (lh&&rh) ? (lh.y < rh.y ? 'left' : rh.y < lh.y ? 'right' : 'level') : 'level';
+        flags.push(side==='level' ? 'Hips level' : `Hips: ${side} higher by ${m.hipTilt.toFixed(1)}°`);
+      }
       if (Number.isFinite(m.forwardHead)) flags.push(`Head ${Math.round(m.forwardHead*100)<=5?'neutral':Math.round(m.forwardHead*100)+'% forward'}`);
       if (m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) flags.push(`Torso ${Math.round(m.symmetry.torsoDiffPct*100)<=5?'symmetric':Math.round(m.symmetry.torsoDiffPct*100)+'% L/R diff'}`);
       if (limb && Number.isFinite(limb.armDiff)) flags.push(`Arms ${Math.round(limb.armDiff*100)<=10?'balanced':Math.round(limb.armDiff*100)+'% diff'}`);
