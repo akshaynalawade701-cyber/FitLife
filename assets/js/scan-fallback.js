@@ -231,9 +231,12 @@
     const drawCornerText = (x, y, text) => { ctx.font = `${Math.max(12, Math.floor(w/60))}px ui-sans-serif, system-ui`; ctx.lineWidth = Math.max(2, Math.floor(w/800)); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.strokeText(text, x, y); ctx.fillStyle = '#ffffff'; ctx.fillText(text, x, y); };
     const drawBadge = (x,y,text)=>{ const size=Math.max(12,Math.floor(w/50)); ctx.font=`${size}px ui-sans-serif, system-ui`; const tw=ctx.measureText(text).width; const tx=Math.max(6,Math.min(w-tw-6,x)); const ty=Math.max(12,Math.min(h-6,y)); ctx.lineWidth=Math.max(2,Math.floor(w/600)); ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.strokeText(text,tx,ty); ctx.fillStyle='#ffffff'; ctx.fillText(text,tx,ty); };
     const pairs = [['left_shoulder','right_shoulder'],['left_hip','right_hip'],['left_shoulder','left_elbow'],['left_elbow','left_wrist'],['right_shoulder','right_elbow'],['right_elbow','right_wrist'],['left_hip','left_knee'],['left_knee','left_ankle'],['right_hip','right_knee'],['right_knee','right_ankle'],['left_shoulder','left_hip'],['right_shoulder','right_hip']];
-    ctx.lineWidth = Math.max(2, w/400); ctx.strokeStyle = 'rgba(7,192,162,0.9)';
-    pairs.forEach(([a,b])=>{ const p=get(a), q=get(b); if(p&&q){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }});
-    if (options && options.showLandmarks) {
+    const bfOnly = options && options.mode === 'bf-only';
+    if (!bfOnly) {
+      ctx.lineWidth = Math.max(2, w/400); ctx.strokeStyle = 'rgba(7,192,162,0.9)';
+      pairs.forEach(([a,b])=>{ const p=get(a), q=get(b); if(p&&q){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }});
+    }
+    if (options && options.showLandmarks && !bfOnly) {
       keypoints.forEach(k=>{ if(!k||(k.score!==undefined && k.score<0.3)) return; ctx.fillStyle='#07c0a2'; ctx.beginPath(); ctx.arc(k.x,k.y,Math.max(3,w/200),0,Math.PI*2); ctx.fill(); });
     }
     // Silhouette outline from convex hull of confident keypoints
@@ -246,51 +249,45 @@
       const hull = lower.slice(0, lower.length-1).concat(upper.slice(0, upper.length-1));
       if (hull.length>=3){
         ctx.save();
-        ctx.fillStyle='rgba(7,192,162,0.16)';
-        ctx.strokeStyle='#07c0a2';
+        ctx.fillStyle= bfOnly ? 'rgba(255,165,0,0.12)' : 'rgba(7,192,162,0.16)';
+        ctx.strokeStyle= bfOnly ? 'rgba(255,165,0,0.6)' : '#07c0a2';
         ctx.lineWidth=Math.max(2,w/500);
         ctx.beginPath(); ctx.moveTo(hull[0].x, hull[0].y); for(let i=1;i<hull.length;i++){ ctx.lineTo(hull[i].x, hull[i].y);} ctx.closePath();
         ctx.fill(); ctx.stroke();
         ctx.restore();
       }
     }
+    // Ideal lines and metric badges (skip in BF-only)
+    if (!bfOnly){
+      ctx.save(); ctx.setLineDash([6,4]); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=Math.max(1,w/500);
+      const ls=get('left_shoulder'), rs=get('right_shoulder'), lh=get('left_hip'), rh=get('right_hip'), nose=get('nose'); const ms=mid(ls,rs), mh=mid(lh,rh);
+      if (ms) { ctx.beginPath(); ctx.moveTo(8, ms.y); ctx.lineTo(w-8, ms.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(ms.x, 8); ctx.lineTo(ms.x, h-8); ctx.stroke(); }
+      if (mh) { ctx.beginPath(); ctx.moveTo(8, mh.y); ctx.lineTo(w-8, mh.y); ctx.stroke(); }
+      ctx.restore();
+    }
+    // Fat heatmap overlays (BF-only): lower abdomen, upper abdomen, hips
+    if (bfOnly){
+      const sex = window.__fitlife_last_sex || 'male';
+      const bf = window.__fitlife_last_bf || null;
+      const pct = bf ? parseInt(String(bf).replace(/[^0-9]/g,''),10) : NaN;
+      const ls=get('left_shoulder'), rs=get('right_shoulder'), lh=get('left_hip'), rh=get('right_hip');
+      const ms=mid(ls,rs), mh=mid(lh,rh);
+      ctx.save();
+      // Lower abdomen band
+      if (Number.isFinite(pct) && pct>=18){ ctx.fillStyle='rgba(255,99,71,0.18)'; const y1= mh? Math.min(h-8, mh.y + (h*0.06)) : h*0.6; const y0 = y1 - (h*0.12); ctx.fillRect(w*0.2, y0, w*0.6, Math.max(12, y1-y0)); }
+      // Upper abdomen band
+      if (Number.isFinite(pct) && pct>=28){ ctx.fillStyle='rgba(255,140,0,0.16)'; const y1= ms? Math.min(h-8, ms.y + (h*0.06)) : h*0.45; const y0 = y1 - (h*0.1); ctx.fillRect(w*0.22, y0, w*0.56, Math.max(10, y1-y0)); }
+      // Hips ovals (more likely with higher BF and/or female)
+      if (Number.isFinite(pct) && ((sex==='female' && pct>=22) || pct>=25)){
+        ctx.fillStyle='rgba(255,99,71,0.16)';
+        const cxL = w*0.33, cxR = w*0.67, cy = mh? mh.y + (h*0.08): h*0.68, rx = w*0.12, ry = h*0.09;
+        ctx.beginPath(); ctx.ellipse(cxL, cy, rx, ry, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cxR, cy, rx, ry, 0, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
     // Title
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(8,8,220,30); ctx.fillStyle='#fff'; ctx.font=`${Math.max(14, Math.floor(w/40))}px ui-sans-serif, system-ui`; ctx.fillText('FitLife Body Scan',16,30);
-    // Ideal lines
-    ctx.save(); ctx.setLineDash([6,4]); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=Math.max(1,w/500);
-    const ls=get('left_shoulder'), rs=get('right_shoulder'), lh=get('left_hip'), rh=get('right_hip'), nose=get('nose'); const ms=mid(ls,rs), mh=mid(lh,rh);
-    if (ms) { ctx.beginPath(); ctx.moveTo(8, ms.y); ctx.lineTo(w-8, ms.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(ms.x, 8); ctx.lineTo(ms.x, h-8); ctx.stroke(); }
-    if (mh) { ctx.beginPath(); ctx.moveTo(8, mh.y); ctx.lineTo(w-8, mh.y); ctx.stroke(); }
-    ctx.restore();
-    const m = window.__fitlife_last_metrics;
-    const limb = window.__fitlife_last_limb;
-    if (ls && rs && ms && m && Number.isFinite(m.shoulderTilt)) {
-      const side = ls.y < rs.y ? 'Left higher' : rs.y < ls.y ? 'Right higher' : 'Level';
-      ctx.strokeStyle='rgba(255,255,0,0.9)'; ctx.beginPath(); ctx.moveTo(ls.x,ls.y); ctx.lineTo(rs.x,rs.y); ctx.stroke();
-      drawBadge(ms.x, ms.y-28, side==='Level' ? `Shoulders: level (≤ 2°)` : `Shoulders: ${side} by ${m.shoulderTilt.toFixed(1)}°`);
-    }
-    if (lh && rh && mh && m && Number.isFinite(m.hipTilt)) {
-      const sideH = lh.y < rh.y ? 'Left higher' : rh.y < lh.y ? 'Right higher' : 'Level';
-      ctx.strokeStyle='rgba(255,140,0,0.9)'; ctx.beginPath(); ctx.moveTo(lh.x,lh.y); ctx.lineTo(rh.x,rh.y); ctx.stroke();
-      drawBadge(mh.x, mh.y+8, sideH==='Level' ? `Hips: level (≤ 2°)` : `Hips: ${sideH} by ${m.hipTilt.toFixed(1)}°`);
-    }
-    if (ms && nose && m && Number.isFinite(m.forwardHead)) { ctx.strokeStyle='rgba(173,216,230,0.9)'; ctx.beginPath(); ctx.moveTo(nose.x,nose.y); ctx.lineTo(ms.x,nose.y); ctx.stroke(); drawBadge(nose.x, Math.max(4, nose.y-24), `FHP: ${Math.round(m.forwardHead*100)}% (≤ 5%)`); }
-    if (ls && lh && rs && rh && m && m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) { const mt = mid(ms||ls,mh||lh)||{x:(w*0.05),y:(h*0.5)}; drawBadge(mt.x, mt.y, `Torso L/R: ${Math.round(m.symmetry.torsoDiffPct*100)}% (≤ 5%)`); }
-    if (limb && Number.isFinite(limb.armDiff)) { drawBadge(w*0.04, h*0.08, `Arms diff: ${Math.round(limb.armDiff*100)}% (≤ 10%)`); }
-    if (limb && Number.isFinite(limb.legDiff)) { drawBadge(w*0.04, h*0.08 + Math.max(28, h/20), `Legs diff: ${Math.round(limb.legDiff*100)}% (≤ 10%)`); }
-    // Overlay scores and human-readable summary (top-right)
-    const scores = options && options.scores || null;
-    let y = 20;
-    if (scores){ drawCornerText(w - 260, y, `Posture score: ${scores.posture}`); y += 18; drawCornerText(w - 260, y, `Symmetry score: ${scores.symmetry}`); y += 22; }
-    const human=[];
-    const mm = window.__fitlife_last_metrics || {};
-    const sTilt = (Number.isFinite(mm.shoulderTilt)) ? (mm.shoulderTilt<=2?'Shoulders level':`Shoulders: ${mm.shoulderTilt.toFixed(1)}° tilt`) : null;
-    const hTilt = (Number.isFinite(mm.hipTilt)) ? (mm.hipTilt<=2?'Hips level':`Hips: ${mm.hipTilt.toFixed(1)}° tilt`) : null;
-    const fh = (Number.isFinite(mm.forwardHead)) ? ((mm.forwardHead*100)<=5?'Head neutral':`Head: ${Math.round(mm.forwardHead*100)}% forward`) : null;
-    const torso = (mm.symmetry && Number.isFinite(mm.symmetry.torsoDiffPct)) ? ((mm.symmetry.torsoDiffPct*100)<=5?'Torso symmetric':`Torso: ${Math.round(mm.symmetry.torsoDiffPct*100)}% L/R diff`) : null;
-    [sTilt,hTilt,fh,torso].filter(Boolean).forEach(s=>{ drawCornerText(w-260, y, s); y+=18; });
-
-    try { canvas.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
   }
 
   // Preview thumbnails with delete buttons in fallback

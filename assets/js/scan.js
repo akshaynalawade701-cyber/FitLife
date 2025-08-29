@@ -683,7 +683,13 @@ async function analyzeAndRender() {
     }
     const limb = limbImbalanceFromKeypoints(kps);
 
-    // Draw overlay with metrics (or BF-only)
+    const { sex, age, heightM, weightKg } = getScanInputs();
+    const bmi = computeBMI(heightM, weightKg);
+    const bf = bodyFatFromInputs(bmi, sex, age);
+    window.__fitlife_last_bf = bf;
+    window.__fitlife_last_sex = sex;
+
+    // Draw overlay with context now that BF is known
     const bfOnly = document.getElementById('bs-bf-only')?.checked;
     drawOverlay(baseImage, kps, metrics, limb, { mode: bfOnly ? 'bf-only' : undefined });
     try { document.getElementById('bs-annotated')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
@@ -694,16 +700,14 @@ async function analyzeAndRender() {
       const res = document.getElementById('bs-results'); if (res){ const holder = document.createElement('div'); holder.className = 'metric'; holder.innerHTML = '<h4>Annotated view</h4>'; holder.appendChild(imgEl); res.prepend(holder); }
     } catch {}
 
-    const { sex, age, heightM, weightKg } = getScanInputs();
-    const bmi = computeBMI(heightM, weightKg);
-    const bf = bodyFatFromInputs(bmi, sex, age);
-
     const report = { timestamp: new Date().toISOString(), metrics, limb, bodyFatEstimate: bf, bmi: bmi ? Number(bmi.toFixed(1)) : null, inputs: { sex, age, heightM, weightKg } };
     lastReport = report;
 
     const results = document.getElementById('bs-results');
     results.innerHTML = '';
-    _renderResults({ metrics, bodyFatEstimate: bf });
+    if (!bfOnly) {
+      _renderResults({ metrics, bodyFatEstimate: bf });
+    }
 
     const head = document.createElement('div');
     head.className = 'metric';
@@ -716,29 +720,67 @@ async function analyzeAndRender() {
     `;
     results.appendChild(head);
 
-    const limbCard = document.createElement('div');
-    limbCard.className = 'metric';
-    limbCard.innerHTML = `
-      <h4>Limb Balance</h4>
-      <div class="kv"><span>Arms balance</span><span>${formatPct(limb?.armDiff)}</span></div>
-      <div class="kv"><span>Legs balance</span><span>${formatPct(limb?.legDiff)}</span></div>
-    `;
-    results.appendChild(limbCard);
+    function suggestionsFromMetrics(m, limb){
+      const s = [];
+      if (Number.isFinite(m.forwardHead) && m.forwardHead > 0.05){ s.push('Strengthen mid-back (lower traps/rhomboids) and deep neck flexors; mobilize pecs'); }
+      if (Number.isFinite(m.shoulderTilt) && m.shoulderTilt > 2){ s.push('Improve shoulder stability: lower traps, serratus anterior; practice anti-lateral flexion'); }
+      if (Number.isFinite(m.hipTilt) && m.hipTilt > 2){ s.push('Glute medius strengthening and lateral core (side planks) for hip leveling'); }
+      if (m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct) && m.symmetry.torsoDiffPct > 0.05){ s.push('Balance obliques and QL; add carries and anti-rotation work'); }
+      if (limb && Number.isFinite(limb.armDiff) && limb.armDiff > 0.1){ s.push('Use unilateral arm training to balance sides'); }
+      if (limb && Number.isFinite(limb.legDiff) && limb.legDiff > 0.1){ s.push('Add single-leg work (split squats, step-ups) to balance legs'); }
+      return s;
+    }
 
-    const explain = document.createElement('div');
-    explain.className = 'metric';
-    explain.innerHTML = `
-      <h4>How to read these</h4>
-      <ul>
-        <li><strong>Shoulders level</strong>: how tilted shoulders are left-to-right. ≤ 2° is usually fine.</li>
-        <li><strong>Hips level</strong>: pelvis tilt left-to-right. ≤ 2° is usually fine.</li>
-        <li><strong>Head forward</strong>: how far the head sits in front of body center (scaled to shoulder width). ≤ 5% is good.</li>
-        <li><strong>Torso symmetry</strong>: left vs right torso length difference. ≤ 5% is good.</li>
-        <li><strong>Arms/Legs balance</strong>: left vs right length difference in this snapshot. ≤ 10% is fine.</li>
-        <li><em>Tip</em>: These are visual estimates from one frame. For best accuracy, use front/side photos with neutral stance and good lighting.</li>
-      </ul>
+    // Fat distribution hints based on BF% and sex
+    function areasFromBf(bf, sex){
+      const out = [];
+      const pct = bf ? parseInt(String(bf).replace(/[^0-9]/g,''),10) : NaN;
+      if (!Number.isFinite(pct)) return out;
+      if (pct >= 18) out.push('Lower abdomen');
+      if ((sex==='female' && pct>=22) || pct>=25) out.push('Hips');
+      if (pct>=28) out.push('Upper abdomen');
+      return out;
+    }
+
+    if (!bfOnly) {
+      const limbCard = document.createElement('div');
+      limbCard.className = 'metric';
+      limbCard.innerHTML = `
+        <h4>Limb Balance</h4>
+        <div class="kv"><span>Arms balance</span><span>${formatPct(limb?.armDiff)}</span></div>
+        <div class="kv"><span>Legs balance</span><span>${formatPct(limb?.legDiff)}</span></div>
+      `;
+      results.appendChild(limbCard);
+    }
+
+    // Muscle suggestions & fat areas
+    const suggCard = document.createElement('div');
+    suggCard.className = 'metric';
+    const sugg = suggestionsFromMetrics(metrics, limb);
+    const areas = areasFromBf(bf, sex);
+    suggCard.innerHTML = `
+      <h4>Personalized Suggestions</h4>
+      ${sugg.length? `<ul>${sugg.map(x=>`<li>${x}</li>`).join('')}</ul>` : '<p class="muted">Looks good. Keep training balanced.</p>'}
+      ${areas.length? `<p class="muted">Likely higher fat areas: ${areas.join(', ')} (based on BF%).</p>`: ''}
     `;
-    results.appendChild(explain);
+    results.appendChild(suggCard);
+
+    if (!bfOnly) {
+      const explain = document.createElement('div');
+      explain.className = 'metric';
+      explain.innerHTML = `
+        <h4>How to read these</h4>
+        <ul>
+          <li><strong>Shoulders level</strong>: how tilted shoulders are left-to-right. ≤ 2° is usually fine.</li>
+          <li><strong>Hips level</strong>: pelvis tilt left-to-right. ≤ 2° is usually fine.</li>
+          <li><strong>Head forward</strong>: how far the head sits in front of body center (scaled to shoulder width). ≤ 5% is good.</li>
+          <li><strong>Torso symmetry</strong>: left vs right torso length difference. ≤ 5% is good.</li>
+          <li><strong>Arms/Legs balance</strong>: left vs right length difference in this snapshot. ≤ 10% is fine.</li>
+          <li><em>Tip</em>: These are visual estimates from one frame. For best accuracy, use front/side photos with neutral stance and good lighting.</li>
+        </ul>
+      `;
+      results.appendChild(explain);
+    }
     try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
     // Friendly, side-specific summary
