@@ -134,8 +134,9 @@
     const lk=key(kps,'left_knee'), rk=key(kps,'right_knee'), la=key(kps,'left_ankle'), ra=key(kps,'right_ankle');
     const nose=key(kps,'nose'), leye=key(kps,'left_eye')||key(kps,'left_ear'), reye=key(kps,'right_eye')||key(kps,'right_ear');
     let shoulderTilt=null, hipTilt=null, forwardHead=null, symmetry=null;
-    if(ls&&rs){ shoulderTilt=Math.min(45, Math.abs(lineTiltDegrees(ls,rs))); }
-    if(lh&&rh){ hipTilt=Math.min(45, Math.abs(lineTiltDegrees(lh,rh))); }
+    let shoulderTiltRaw=null, hipTiltRaw=null;
+    if(ls&&rs){ shoulderTiltRaw=Math.abs(lineTiltDegrees(ls,rs)); shoulderTilt=Math.min(45, Math.abs(shoulderTiltRaw)); }
+    if(lh&&rh){ hipTiltRaw=Math.abs(lineTiltDegrees(lh,rh)); hipTilt=Math.min(45, Math.abs(hipTiltRaw)); }
     if(nose&&ls&&rs){ const mid={x:(ls.x+rs.x)/2,y:(ls.y+rs.y)/2}, sw=dist(ls,rs)||1; forwardHead=Math.abs(nose.x-mid.x)/sw; }
     else if((leye||reye)&&ls&&rs){ const ear=leye||reye, mid={x:(ls.x+rs.x)/2,y:(ls.y+rs.y)/2}, sw=dist(ls,rs)||1; forwardHead=Math.abs(ear.x-mid.x)/sw; }
     if(ls&&rs&&lh&&rh){ const lt=dist(ls,lh), rt=dist(rs,rh); symmetry={ torsoDiffPct: Math.abs(lt-rt)/Math.max(lt,rt) }; }
@@ -143,7 +144,7 @@
     const rightArm=(rs&&re?dist(rs,re):0)+(re&&rw?dist(re,rw):0);
     const leftLeg=(lh&&lk?dist(lh,lk):0)+(lk&&la?dist(lk,la):0);
     const rightLeg=(rh&&rk?dist(rh,rk):0)+(rk&&ra?dist(rk,ra):0);
-    return { shoulderTilt, hipTilt, forwardHead, symmetry, limb:{ armDiff: Math.abs(leftArm-rightArm)/Math.max(leftArm,rightArm,1), legDiff: Math.abs(leftLeg-rightLeg)/Math.max(leftLeg,rightLeg,1) } };
+    return { shoulderTilt, hipTilt, forwardHead, symmetry, shoulderTiltRaw, hipTiltRaw, limb:{ armDiff: Math.abs(leftArm-rightArm)/Math.max(leftArm,rightArm,1), legDiff: Math.abs(leftLeg-rightLeg)/Math.max(leftLeg,rightLeg,1) } };
   }
 
   function getScanInputs(){
