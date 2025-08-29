@@ -20,6 +20,18 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000`.
 
+## Offline & PWA
+- This site includes a Service Worker for offline caching and a Web App Manifest.
+- On first load, assets are cached. Subsequent loads work offline (calculators, workout builder, nutrition tracker, and static pages). The Body Scan needs internet to fetch ML models from the CDN if not already cached.
+- To test:
+  1. Load `http://localhost:8000` once while online.
+  2. Open DevTools → Application → Service Workers and confirm `sw.js` is active.
+  3. Toggle “Offline” in the Network tab and reload the page; the app should still work.
+
+Notes:
+- Some browsers require HTTPS for Service Workers; `localhost` is allowed for development.
+- If you change files, the SW will update automatically on refresh; you can also call `navigator.serviceWorker.getRegistration().then(r=>r&&r.update())` in the console.
+
 ## Deploy to GitHub Pages
 1. Create a new public repo on GitHub (e.g., `fitness-website`).
 2. Push the contents of this folder to the repo root (so `index.html` is at the top level).
