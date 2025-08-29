@@ -23,13 +23,25 @@
       try { await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.3.1/dist/pose-detection.js'); } catch {}
       PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
     }
+    if (!PD) {
+      try { await loadScript('https://unpkg.com/@tensorflow-models/pose-detection@2.3.1/dist/pose-detection.min.js'); } catch {}
+      PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
+    }
+    if (!PD) {
+      try { await loadScript('https://unpkg.com/@tensorflow-models/pose-detection@2.3.1/dist/pose-detection.js'); } catch {}
+      PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
+    }
     return PD;
   }
 
   async function createDetectorMoveNet(){
     setStatus('Loading model…');
-    await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js');
-    await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.min.js');
+    // Primary TFJS from jsdelivr
+    try { await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js'); } catch {}
+    if (!window.tf) { try { await loadScript('https://unpkg.com/@tensorflow/tfjs@4.13.0/dist/tf.min.js'); } catch {}
+    }
+    try { await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.min.js'); } catch {}
+    if (!(window.tf && window.tf.setWasmPaths)) { try { await loadScript('https://unpkg.com/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.min.js'); } catch {} }
     const PD = await resolvePoseDetection();
     if (!PD || !window.tf) throw new Error('pose-detection unavailable');
     try {
@@ -52,6 +64,7 @@
         setStatus('Model ready (cpu)');
         return det;
       } catch (err) {
+        setStatus('Model load failed');
         throw e;
       }
     }
@@ -121,7 +134,8 @@
 
   async function ensureMediaPipePose(){
     if (window.__fitlife_mp_pose_estimator) return window.__fitlife_mp_pose_estimator;
-    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js');
+    try { await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js'); } catch {}
+    if (!window.Pose) { try { await loadScript('https://unpkg.com/@mediapipe/pose@0.5.1675469404/pose.js'); } catch {} }
     if (!window.Pose) throw new Error('mediapipe pose unavailable');
     const pose = new window.Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}` });
     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });

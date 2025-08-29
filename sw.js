@@ -1,5 +1,5 @@
 /* FitLife Service Worker */
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `fitlife-cache-${CACHE_VERSION}`;
 const ASSETS_TO_PRECACHE = [
   '/',
@@ -74,19 +74,8 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-
-  // Cross-origin (e.g., CDN): stale-while-revalidate
-  event.respondWith(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
-      const networkPromise = fetch(request).then((resp) => {
-        cache.put(request, resp.clone()).catch(() => {});
-        return resp;
-      }).catch(() => null);
-      return cached || networkPromise || Response.error();
-    })()
-  );
+  // Cross-origin (e.g., CDN): do not intercept to avoid CORS/module issues
+  return;
 });
 
 self.addEventListener('message', (event) => {
