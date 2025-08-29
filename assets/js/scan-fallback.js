@@ -198,6 +198,8 @@
     });
     const kps = toKeypointsFromMediaPipe(res.poseLandmarks || []);
     if (targetW && targetH && Array.isArray(kps)) { kps.forEach(p => { p.x *= targetW; p.y *= targetH; }); }
+    // Remember the input size so we can scale keypoints to the base image later
+    window.__fitlife_last_input_size = { w: targetW, h: targetH };
     return kps;
   }
 
@@ -212,7 +214,16 @@
     canvas.width = w; canvas.height = h;
     ctx.clearRect(0,0,w,h);
     ctx.drawImage(baseImage, 0, 0, w, h);
-    const kpBy = new Map(); keypoints.forEach(k=> kpBy.set(k.name||k.part, k));
+    // Scale keypoints from last input size to base image size if needed
+    let scaledKeypoints = keypoints;
+    try {
+      const inp = window.__fitlife_last_input_size;
+      if (inp && inp.w && inp.h && (inp.w !== w || inp.h !== h)){
+        const sx = w / inp.w; const sy = h / inp.h;
+        scaledKeypoints = keypoints.map(k => ({ name: k.name||k.part, x: k.x * sx, y: k.y * sy, score: k.score }));
+      }
+    } catch {}
+    const kpBy = new Map(); scaledKeypoints.forEach(k=> kpBy.set(k.name||k.part, k));
     const get = (n)=> kpBy.get(n);
     const mid = (a,b)=> (a&&b)?{x:(a.x+b.x)/2,y:(a.y+b.y)/2}:null;
     const drawCornerText = (x, y, text) => { ctx.font = `${Math.max(12, Math.floor(w/60))}px ui-sans-serif, system-ui`; ctx.lineWidth = Math.max(2, Math.floor(w/800)); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.strokeText(text, x, y); ctx.fillStyle = '#ffffff'; ctx.fillText(text, x, y); };
@@ -485,6 +496,8 @@
     // Draw overlay on first valid view
     const bestView = all.find(v=>v.kps && v.kps.length) || all[0];
     if (bestView){
+      // Ensure scaling matches the image we are drawing on
+      window.__fitlife_last_input_size = { w: bestView.img.naturalWidth || bestView.img.width, h: bestView.img.naturalHeight || bestView.img.height };
       drawOverlayFallback(bestView.img, bestView.kps, { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr], showLandmarks: false });
       try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
       try { const snap=document.getElementById('bs-annotated').toDataURL('image/png'); const img=new Image(); img.src=snap; img.style.width='100%'; img.style.borderRadius='12px'; img.style.border='1px solid var(--border)'; const holder=document.createElement('div'); holder.className='metric'; holder.innerHTML='<h4>Annotated view</h4>'; holder.appendChild(img); results.prepend(holder); } catch {}
