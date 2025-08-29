@@ -402,7 +402,32 @@
       results.appendChild(explain);
       try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
-      setStatus('Done · ' + `Shoulder ${fmtDeg(m.shoulderTilt)} · Hip ${fmtDeg(m.hipTilt)} · FHP ${fmtPct(m.forwardHead)} · Torso ${fmtPct(m.symmetry?.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
+      const ls = key(kps,'left_shoulder'), rs = key(kps,'right_shoulder');
+      const lh = key(kps,'left_hip'), rh = key(kps,'right_hip');
+      const lines = [];
+      if (Number.isFinite(m.shoulderTilt)){
+        let t = 'Shoulders: level';
+        if (ls && rs){
+          if (ls.y < rs.y && m.shoulderTilt > 0.5) t = `Shoulders: left higher by ${m.shoulderTilt.toFixed(1)}°`;
+          else if (rs.y < ls.y && m.shoulderTilt > 0.5) t = `Shoulders: right higher by ${m.shoulderTilt.toFixed(1)}°`;
+        }
+        lines.push(t);
+      }
+      if (Number.isFinite(m.hipTilt)){
+        let t = 'Hips: level';
+        if (lh && rh){
+          if (lh.y < rh.y && m.hipTilt > 0.5) t = `Hips: left higher by ${m.hipTilt.toFixed(1)}°`;
+          else if (rh.y < lh.y && m.hipTilt > 0.5) t = `Hips: right higher by ${m.hipTilt.toFixed(1)}°`;
+        }
+        lines.push(t);
+      }
+      if (Number.isFinite(m.forwardHead)) lines.push((m.forwardHead*100)<=5 ? 'Head: neutral' : `Head: ${Math.round(m.forwardHead*100)}% forward`);
+      if (m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) lines.push((m.symmetry.torsoDiffPct*100)<=5 ? 'Torso: symmetric' : `Torso: ${Math.round(m.symmetry.torsoDiffPct*100)}% L/R difference`);
+      if (limb && Number.isFinite(limb.armDiff) && Number.isFinite(limb.legDiff)){
+        const a = Math.round(limb.armDiff*100), g = Math.round(limb.legDiff*100);
+        lines.push((a<=10 && g<=10) ? 'Arms/Legs: balanced' : `Arms: ${a}% diff · Legs: ${g}% diff`);
+      }
+      setStatus(lines.join(' · '));
     }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
   }
 

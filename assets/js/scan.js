@@ -719,13 +719,39 @@ async function analyzeAndRender() {
     results.appendChild(explain);
     try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
 
-    const sTilt = Number.isFinite(metrics.shoulderTilt) ? metrics.shoulderTilt.toFixed(1)+'°' : '—';
-    const hTilt = Number.isFinite(metrics.hipTilt) ? metrics.hipTilt.toFixed(1)+'°' : '—';
-    const headFwd = Number.isFinite(metrics.forwardHead) ? Math.round(metrics.forwardHead*100)+'%' : '—';
-    const torso = (metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) ? Math.round(metrics.symmetry.torsoDiffPct*100)+'%' : '—';
-    const arms = (limb && Number.isFinite(limb.armDiff)) ? Math.round(limb.armDiff*100)+'%' : '—';
-    const legs = (limb && Number.isFinite(limb.legDiff)) ? Math.round(limb.legDiff*100)+'%' : '—';
-    setStatus(`Done · Shoulder ${sTilt} · Hip ${hTilt} · FHP ${headFwd} · Torso ${torso} · Arms ${arms} · Legs ${legs}`);
+    // Friendly, side-specific summary
+    const ls = key(kps,'left_shoulder'), rs = key(kps,'right_shoulder');
+    const lh = key(kps,'left_hip'), rh = key(kps,'right_hip');
+    const parts = [];
+    if (Number.isFinite(metrics.shoulderTilt)){
+      let t = 'Shoulders: level';
+      if (ls && rs){
+        if (ls.y < rs.y && metrics.shoulderTilt > 0.5) t = `Shoulders: left higher by ${metrics.shoulderTilt.toFixed(1)}°`;
+        else if (rs.y < ls.y && metrics.shoulderTilt > 0.5) t = `Shoulders: right higher by ${metrics.shoulderTilt.toFixed(1)}°`;
+      }
+      parts.push(t);
+    }
+    if (Number.isFinite(metrics.hipTilt)){
+      let t = 'Hips: level';
+      if (lh && rh){
+        if (lh.y < rh.y && metrics.hipTilt > 0.5) t = `Hips: left higher by ${metrics.hipTilt.toFixed(1)}°`;
+        else if (rh.y < lh.y && metrics.hipTilt > 0.5) t = `Hips: right higher by ${metrics.hipTilt.toFixed(1)}°`;
+      }
+      parts.push(t);
+    }
+    if (Number.isFinite(metrics.forwardHead)){
+      parts.push((metrics.forwardHead*100) <= 5 ? 'Head: neutral' : `Head: ${Math.round(metrics.forwardHead*100)}% forward`);
+    }
+    if (metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)){
+      parts.push((metrics.symmetry.torsoDiffPct*100) <= 5 ? 'Torso: symmetric' : `Torso: ${Math.round(metrics.symmetry.torsoDiffPct*100)}% L/R difference`);
+    }
+    if (limb && Number.isFinite(limb.armDiff) && Number.isFinite(limb.legDiff)){
+      const armPct = Math.round(limb.armDiff*100);
+      const legPct = Math.round(limb.legDiff*100);
+      if (armPct <= 10 && legPct <= 10) parts.push('Arms/Legs: balanced');
+      else parts.push(`Arms: ${armPct}% diff · Legs: ${legPct}% diff`);
+    }
+    setStatus(parts.join(' · '));
   } catch (err) {
     console.error(err);
     setStatus('Analysis failed. Please try different photos.');
