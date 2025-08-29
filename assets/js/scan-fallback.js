@@ -13,6 +13,13 @@
     });
   }
 
+  async function importModule(urls){
+    for (const url of urls){
+      try { const mod = await import(/* webpackIgnore: true */ url); if (mod) return mod; } catch (_) {}
+    }
+    return null;
+  }
+
   async function resolvePoseDetection(){
     let PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
     if (!PD) {
@@ -36,11 +43,37 @@
       try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tensorflow-models-pose-detection/2.3.1/pose-detection.min.js'); } catch {}
       PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
     }
+    if (!PD) {
+      // Try ESM dynamic import
+      const esm = await importModule([
+        'https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.3.1/dist/pose-detection.esm.js',
+        'https://unpkg.com/@tensorflow-models/pose-detection@2.3.1/dist/pose-detection.esm.js',
+        'https://esm.run/@tensorflow-models/pose-detection@2.3.1'
+      ]);
+      if (esm) return esm;
+    }
     return PD;
   }
 
   async function createDetectorMoveNet(){
     setStatus('Loading model…');
+    // Prefer ESM dynamic import (avoids UMD 404/nosniff on some CDNs)
+    try {
+      const TF = await importModule([
+        'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.esm.js',
+        'https://unpkg.com/@tensorflow/tfjs@4.13.0/dist/tf.esm.js',
+        'https://esm.run/@tensorflow/tfjs@4.13.0'
+      ]);
+      if (TF && !window.tf) window.tf = TF;
+      const TF_WASM = await importModule([
+        'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.esm.js',
+        'https://unpkg.com/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.esm.js',
+        'https://esm.run/@tensorflow/tfjs-backend-wasm@4.13.0'
+      ]);
+      if (TF_WASM && TF_WASM.setWasmPaths) {
+        TF_WASM.setWasmPaths('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.13.0/dist/');
+      }
+    } catch {}
     // Primary TFJS from jsdelivr
     try { await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.13.0/dist/tf.min.js'); } catch {}
     if (!window.tf) { try { await loadScript('https://unpkg.com/@tensorflow/tfjs@4.13.0/dist/tf.min.js'); } catch {}
@@ -58,7 +91,7 @@
       await window.tf.ready();
     } catch (_) {}
     try {
-      const det = await PD.createDetector(PD.SupportedModels.MoveNet, { modelType: 'Lightning', enableSmoothing: true });
+      const det = await (PD.createDetector ? PD.createDetector(PD.SupportedModels.MoveNet, { modelType: 'Lightning', enableSmoothing: true }) : PD.default.createDetector(PD.default.SupportedModels.MoveNet, { modelType: 'Lightning', enableSmoothing: true }));
       setStatus('Model ready (wasm)');
       return det;
     } catch (e) {
@@ -66,7 +99,7 @@
       try {
         await window.tf.setBackend('cpu');
         await window.tf.ready();
-        const det = await PD.createDetector(PD.SupportedModels.MoveNet, { modelType: 'Lightning', enableSmoothing: true });
+        const det = await (PD.createDetector ? PD.createDetector(PD.SupportedModels.MoveNet, { modelType: 'Lightning', enableSmoothing: true }) : PD.default.createDetector(PD.default.SupportedModels.MoveNet, { modelType: 'Lightning', enableSmoothing: true }));
         setStatus('Model ready (cpu)');
         return det;
       } catch (err) {
