@@ -184,14 +184,20 @@
 
   async function estimateWithMediaPipe(imageLike){
     const pose = await ensureMediaPipePose();
+    // Resample to a fixed width for deterministic results
+    const srcW = imageLike.videoWidth || imageLike.naturalWidth || imageLike.width || 0;
+    const srcH = imageLike.videoHeight || imageLike.naturalHeight || imageLike.height || 0;
+    const targetW = Math.min(720, srcW || 720);
+    const targetH = srcW ? Math.round((targetW / srcW) * (srcH || targetW)) : targetW;
+    const c = document.createElement('canvas'); c.width = targetW; c.height = targetH;
+    const cctx = c.getContext('2d');
+    try { cctx.drawImage(imageLike, 0, 0, c.width, c.height); } catch {}
     const res = await new Promise((resolve, reject) => {
       pose.onResults((r) => resolve(r));
-      try { pose.send({ image: imageLike }); } catch (e) { reject(e); }
+      try { pose.send({ image: c }); } catch (e) { reject(e); }
     });
     const kps = toKeypointsFromMediaPipe(res.poseLandmarks || []);
-    const w = imageLike.videoWidth || imageLike.naturalWidth || imageLike.width || 0;
-    const h = imageLike.videoHeight || imageLike.naturalHeight || imageLike.height || 0;
-    if (w && h && Array.isArray(kps)) { kps.forEach(p => { p.x *= w; p.y *= h; }); }
+    if (targetW && targetH && Array.isArray(kps)) { kps.forEach(p => { p.x *= targetW; p.y *= targetH; }); }
     return kps;
   }
 
@@ -214,7 +220,27 @@
     const pairs = [['left_shoulder','right_shoulder'],['left_hip','right_hip'],['left_shoulder','left_elbow'],['left_elbow','left_wrist'],['right_shoulder','right_elbow'],['right_elbow','right_wrist'],['left_hip','left_knee'],['left_knee','left_ankle'],['right_hip','right_knee'],['right_knee','right_ankle'],['left_shoulder','left_hip'],['right_shoulder','right_hip']];
     ctx.lineWidth = Math.max(2, w/400); ctx.strokeStyle = 'rgba(7,192,162,0.9)';
     pairs.forEach(([a,b])=>{ const p=get(a), q=get(b); if(p&&q){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }});
-    keypoints.forEach(k=>{ if(!k||(k.score!==undefined && k.score<0.3)) return; ctx.fillStyle='#07c0a2'; ctx.beginPath(); ctx.arc(k.x,k.y,Math.max(3,w/200),0,Math.PI*2); ctx.fill(); });
+    if (options && options.showLandmarks) {
+      keypoints.forEach(k=>{ if(!k||(k.score!==undefined && k.score<0.3)) return; ctx.fillStyle='#07c0a2'; ctx.beginPath(); ctx.arc(k.x,k.y,Math.max(3,w/200),0,Math.PI*2); ctx.fill(); });
+    }
+    // Silhouette outline from convex hull of confident keypoints
+    const pts = keypoints.filter(k=>!k||k.score===undefined||k.score>=0.4).map(k=>({x:k.x,y:k.y}));
+    if (pts.length>=3){
+      const cross=(o,a,b)=>((a.x-o.x)*(b.y-o.y))-((a.y-o.y)*(b.x-o.x));
+      const sorted=[...pts].sort((a,b)=>a.x===b.x? a.y-b.y : a.x-b.x);
+      const lower=[]; for(const p of sorted){ while(lower.length>=2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop(); lower.push(p);} 
+      const upper=[]; for(let i=sorted.length-1;i>=0;i--){ const p=sorted[i]; while(upper.length>=2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop(); upper.push(p);} 
+      const hull = lower.slice(0, lower.length-1).concat(upper.slice(0, upper.length-1));
+      if (hull.length>=3){
+        ctx.save();
+        ctx.fillStyle='rgba(7,192,162,0.16)';
+        ctx.strokeStyle='#07c0a2';
+        ctx.lineWidth=Math.max(2,w/500);
+        ctx.beginPath(); ctx.moveTo(hull[0].x, hull[0].y); for(let i=1;i<hull.length;i++){ ctx.lineTo(hull[i].x, hull[i].y);} ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+    }
     // Title
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(8,8,220,30); ctx.fillStyle='#fff'; ctx.font=`${Math.max(14, Math.floor(w/40))}px ui-sans-serif, system-ui`; ctx.fillText('FitLife Body Scan',16,30);
     // Ideal lines
@@ -421,7 +447,7 @@
     // Draw overlay on first valid view
     const bestView = all.find(v=>v.kps && v.kps.length) || all[0];
     if (bestView){
-      drawOverlayFallback(bestView.img, bestView.kps, { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr] });
+      drawOverlayFallback(bestView.img, bestView.kps, { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr], showLandmarks: false });
       try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
       try { const snap=document.getElementById('bs-annotated').toDataURL('image/png'); const img=new Image(); img.src=snap; img.style.width='100%'; img.style.borderRadius='12px'; img.style.border='1px solid var(--border)'; const holder=document.createElement('div'); holder.className='metric'; holder.innerHTML='<h4>Annotated view</h4>'; holder.appendChild(img); results.prepend(holder); } catch {}
     }
