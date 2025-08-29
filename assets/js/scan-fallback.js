@@ -167,7 +167,8 @@
     if (!window.Pose) { try { await loadScript('https://unpkg.com/@mediapipe/pose@0.5.1675469404/pose.js'); } catch {} }
     if (!window.Pose) throw new Error('mediapipe pose unavailable');
     const pose = new window.Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}` });
-    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    const hiacc = document.getElementById('bs-hiacc')?.checked;
+    pose.setOptions({ modelComplexity: hiacc?2:1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
     window.__fitlife_mp_pose_estimator = pose;
     return pose;
   }
@@ -420,9 +421,11 @@
       if (Number.isFinite(m.shoulderTilt)){
         let t = 'Shoulders: level';
         if (ls && rs){
-          const above = Math.max(0, (m.shoulderTiltRaw ?? m.shoulderTilt) - 45);
-          const baseStr = (ls.y < rs.y && m.shoulderTilt > 0.5) ? `Shoulders: left higher by ${m.shoulderTilt.toFixed(1)}°` : (rs.y < ls.y && m.shoulderTilt > 0.5) ? `Shoulders: right higher by ${m.shoulderTilt.toFixed(1)}°` : 'Shoulders: level';
-          t = above > 0.1 ? `${baseStr} (exceeds 45° by ${above.toFixed(1)}°)` : baseStr;
+          const sw = Math.hypot(ls.x - rs.x, ls.y - rs.y) || 1;
+          const vr = Math.abs(ls.y - rs.y) / sw;
+          const vrPct = Math.round(vr * 100);
+          const side = (ls.y < rs.y) ? 'left' : (rs.y < ls.y) ? 'right' : 'level';
+          if (side !== 'level') t = `Shoulders: ${side} higher by ${vrPct}% (≈ ${m.shoulderTilt.toFixed(1)}°)`;
         }
         lines.push(t);
       }

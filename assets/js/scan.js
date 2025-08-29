@@ -28,10 +28,9 @@ async function ensureDetector() {
       await tf.setBackend('webgl');
       await tf.ready();
     }
-    detector = await posedetection.createDetector(posedetection.SupportedModels.MoveNet, {
-      modelType: 'Lightning', // lighter and faster; better reliability
-      enableSmoothing: true
-    });
+    const hiacc = document.getElementById('bs-hiacc')?.checked;
+    const modelType = hiacc ? 'Thunder' : 'Lightning';
+    detector = await posedetection.createDetector(posedetection.SupportedModels.MoveNet, { modelType, enableSmoothing: true });
     setStatus(`Model ready (${tf.getBackend()})`);
     // Model initialized successfully; mark module as booted so fallback defers
     window.__fitlife_scan_booted = true;
@@ -660,7 +659,23 @@ async function analyzeAndRender() {
 
     if (!kps || !kps.length) { setStatus('No person detected. Try a clearer, well-lit image.'); return; }
 
-    const metrics = computeMetricsFromKeypoints(kps);
+    // Multi-sample averaging for high-accuracy
+    const hiacc = document.getElementById('bs-hiacc')?.checked;
+    let metrics = computeMetricsFromKeypoints(kps);
+    if (hiacc){
+      const det = await ensureDetector();
+      const samples = [metrics];
+      for (let i=0;i<4;i++){ const poses = await det.estimatePoses(baseImage || (typeof img!=='undefined'?img:document.createElement('canvas')), { maxPoses: 1, flipHorizontal: false }); if (poses[0]?.keypoints?.length){ samples.push(computeMetricsFromKeypoints(poses[0].keypoints)); } }
+      const avg = (arr, sel)=>{ const v=arr.map(sel).filter(Number.isFinite); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; };
+      metrics = {
+        shoulderTilt: avg(samples, s=>s.shoulderTilt),
+        hipTilt: avg(samples, s=>s.hipTilt),
+        forwardHead: avg(samples, s=>s.forwardHead),
+        symmetry: { torsoDiffPct: avg(samples, s=>s.symmetry?.torsoDiffPct) },
+        shoulderTiltRaw: avg(samples, s=>s.shoulderTiltRaw),
+        hipTiltRaw: avg(samples, s=>s.hipTiltRaw)
+      };
+    }
     const limb = limbImbalanceFromKeypoints(kps);
 
     // Draw overlay with metrics
@@ -727,9 +742,11 @@ async function analyzeAndRender() {
     if (Number.isFinite(metrics.shoulderTilt)){
       let t = 'Shoulders: level';
       if (ls && rs){
-        const above = Math.max(0, (metrics.shoulderTiltRaw ?? metrics.shoulderTilt) - 45);
-        const baseStr = (ls.y < rs.y && metrics.shoulderTilt > 0.5) ? `Shoulders: left higher by ${metrics.shoulderTilt.toFixed(1)}°` : (rs.y < ls.y && metrics.shoulderTilt > 0.5) ? `Shoulders: right higher by ${metrics.shoulderTilt.toFixed(1)}°` : 'Shoulders: level';
-        t = above > 0.1 ? `${baseStr} (exceeds 45° by ${above.toFixed(1)}°)` : baseStr;
+        const shoulderWidth = Math.hypot(ls.x - rs.x, ls.y - rs.y) || 1;
+        const vr = Math.abs(ls.y - rs.y) / shoulderWidth; // vertical gap as % of shoulder width
+        const vrPct = Math.round(vr * 100);
+        const side = (ls.y < rs.y) ? 'left' : (rs.y < ls.y) ? 'right' : 'level';
+        if (side !== 'level') t = `Shoulders: ${side} higher by ${vrPct}% (≈ ${metrics.shoulderTilt.toFixed(1)}°)`;
       }
       parts.push(t);
     }
