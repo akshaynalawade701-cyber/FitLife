@@ -690,8 +690,8 @@ async function analyzeAndRender() {
     window.__fitlife_last_sex = sex;
 
     // Draw overlay with context now that BF is known
-    const bfOnly = document.getElementById('bs-bf-only')?.checked;
-    drawOverlay(baseImage, kps, metrics, limb, { mode: bfOnly ? 'bf-only' : undefined });
+    const bfOnly = true;
+    drawOverlay(baseImage, kps, metrics, limb, { mode: 'bf-only' });
     try { document.getElementById('bs-annotated')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
     // Snapshot into results
     try {
@@ -705,9 +705,7 @@ async function analyzeAndRender() {
 
     const results = document.getElementById('bs-results');
     results.innerHTML = '';
-    if (!bfOnly) {
-      _renderResults({ metrics, bodyFatEstimate: bf });
-    }
+    // Only body fat results shown
 
     const head = document.createElement('div');
     head.className = 'metric';
