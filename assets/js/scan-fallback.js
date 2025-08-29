@@ -195,7 +195,7 @@
     return kps;
   }
 
-  function drawOverlayFallback(baseImage, keypoints){
+  function drawOverlayFallback(baseImage, keypoints, options){
     const canvas = document.getElementById('bs-annotated');
     const wrap = canvas?.parentElement; if (wrap) wrap.classList.remove('hidden');
     if (!canvas || !baseImage) return;
@@ -209,6 +209,7 @@
     const kpBy = new Map(); keypoints.forEach(k=> kpBy.set(k.name||k.part, k));
     const get = (n)=> kpBy.get(n);
     const mid = (a,b)=> (a&&b)?{x:(a.x+b.x)/2,y:(a.y+b.y)/2}:null;
+    const drawCornerText = (x, y, text) => { ctx.font = `${Math.max(12, Math.floor(w/60))}px ui-sans-serif, system-ui`; ctx.lineWidth = Math.max(2, Math.floor(w/800)); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.strokeText(text, x, y); ctx.fillStyle = '#ffffff'; ctx.fillText(text, x, y); };
     const drawBadge = (x,y,text)=>{ const size=Math.max(12,Math.floor(w/50)); ctx.font=`${size}px ui-sans-serif, system-ui`; const tw=ctx.measureText(text).width; const tx=Math.max(6,Math.min(w-tw-6,x)); const ty=Math.max(12,Math.min(h-6,y)); ctx.lineWidth=Math.max(2,Math.floor(w/600)); ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.strokeText(text,tx,ty); ctx.fillStyle='#ffffff'; ctx.fillText(text,tx,ty); };
     const pairs = [['left_shoulder','right_shoulder'],['left_hip','right_hip'],['left_shoulder','left_elbow'],['left_elbow','left_wrist'],['right_shoulder','right_elbow'],['right_elbow','right_wrist'],['left_hip','left_knee'],['left_knee','left_ankle'],['right_hip','right_knee'],['right_knee','right_ankle'],['left_shoulder','left_hip'],['right_shoulder','right_hip']];
     ctx.lineWidth = Math.max(2, w/400); ctx.strokeStyle = 'rgba(7,192,162,0.9)';
@@ -230,6 +231,13 @@
     if (ls && lh && rs && rh && m && m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) { const mt = mid(ms||ls,mh||lh)||{x:(w*0.05),y:(h*0.5)}; drawBadge(mt.x, mt.y, `Torso L/R: ${Math.round(m.symmetry.torsoDiffPct*100)}% (≤ 5%)`); }
     if (limb && Number.isFinite(limb.armDiff)) { drawBadge(w*0.04, h*0.08, `Arms diff: ${Math.round(limb.armDiff*100)}% (≤ 10%)`); }
     if (limb && Number.isFinite(limb.legDiff)) { drawBadge(w*0.04, h*0.08 + Math.max(28, h/20), `Legs diff: ${Math.round(limb.legDiff*100)}% (≤ 10%)`); }
+    // Overlay scores (if provided)
+    const scores = options && options.scores || null;
+    const summaries = options && options.summaries || [];
+    let y = 20;
+    if (scores){ drawCornerText(w - 210, y, `Posture score: ${scores.posture}`); y += 18; drawCornerText(w - 210, y, `Symmetry score: ${scores.symmetry}`); y += 22; }
+    summaries.forEach(s => { drawCornerText(w - 210, y, s); y += 18; });
+
     try { canvas.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
   }
 
@@ -369,7 +377,7 @@
     // Draw overlay on first valid view
     const bestView = all.find(v=>v.kps && v.kps.length) || all[0];
     if (bestView){
-      drawOverlayFallback(bestView.img, bestView.kps);
+      drawOverlayFallback(bestView.img, bestView.kps, { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr] });
       try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
       try { const snap=document.getElementById('bs-annotated').toDataURL('image/png'); const img=new Image(); img.src=snap; img.style.width='100%'; img.style.borderRadius='12px'; img.style.border='1px solid var(--border)'; const holder=document.createElement('div'); holder.className='metric'; holder.innerHTML='<h4>Annotated view</h4>'; holder.appendChild(img); results.prepend(holder); } catch {}
     }
