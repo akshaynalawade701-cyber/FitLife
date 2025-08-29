@@ -369,78 +369,35 @@
       const limb = (function(){ const l = {}; const ls=key(kps,'left_shoulder'), rs=key(kps,'right_shoulder'), le=key(kps,'left_elbow'), re=key(kps,'right_elbow'), lw=key(kps,'left_wrist'), rw=key(kps,'right_wrist'), lh=key(kps,'left_hip'), rh=key(kps,'right_hip'), lk=key(kps,'left_knee'), rk=key(kps,'right_knee'), la=key(kps,'left_ankle'), ra=key(kps,'right_ankle'); const leftArm=(ls&&le?dist(ls,le):0)+(le&&lw?dist(le,lw):0); const rightArm=(rs&&re?dist(rs,re):0)+(re&&rw?dist(re,rw):0); const leftLeg=(lh&&lk?dist(lh,lk):0)+(lk&&la?dist(lk,la):0); const rightLeg=(rh&&rk?dist(rh,rk):0)+(rk&&ra?dist(rk,ra):0); return { armDiff: Math.abs(leftArm-rightArm)/Math.max(leftArm,rightArm,1), legDiff: Math.abs(leftLeg-rightLeg)/Math.max(leftLeg,rightLeg,1) }; })();
       window.__fitlife_last_metrics = m;
       window.__fitlife_last_limb = limb;
-      drawOverlayFallback(baseImage, kps);
+      drawOverlayFallback(baseImage, kps, { mode: 'bf-only' });
 
       const {sex,age,heightM,weightKg} = getScanInputs();
       const bmi = computeBMI(heightM,weightKg);
       const bf = bodyFatFromInputs(bmi,sex,age);
 
       const results = $('#bs-results'); results.innerHTML='';
-      const posture = document.createElement('div'); posture.className='metric'; posture.innerHTML = `
-        <h4>Posture & Symmetry</h4>
-        <div class="kv"><span>Shoulder tilt</span><span>${fmtDeg(m.shoulderTilt)}</span></div>
-        <div class="kv"><span>Hip tilt</span><span>${fmtDeg(m.hipTilt)}</span></div>
-        <div class="kv"><span>Forward head offset</span><span>${fmtPct(m.forwardHead)}</span></div>
-        <div class="kv"><span>Torso L/R diff</span><span>${fmtPct(m.symmetry?.torsoDiffPct)}</span></div>
-      `; results.appendChild(posture);
       const body = document.createElement('div'); body.className='metric'; body.innerHTML = `
-        <h4>Body Data</h4>
-        <div class="kv"><span>Sex</span><span>${sex}</span></div>
-        <div class="kv"><span>Age</span><span>${Number.isFinite(age)?age:'—'}</span></div>
-        <div class="kv"><span>BMI</span><span>${Number.isFinite(bmi)?bmi.toFixed(1):'—'}</span></div>
+        <h4>Body Fat</h4>
         <div class="kv"><span>Body fat (est.)</span><span>${bf??'—'}</span></div>
       `; results.appendChild(body);
-      const limbCard = document.createElement('div'); limbCard.className='metric'; limbCard.innerHTML = `
-        <h4>Limb Balance</h4>
-        <div class="kv"><span>Arms L/R diff</span><span>${fmtPct(limb?.armDiff)}</span></div>
-        <div class="kv"><span>Legs L/R diff</span><span>${fmtPct(limb?.legDiff)}</span></div>
-      `; results.appendChild(limbCard);
 
-      const explain = document.createElement('div');
-      explain.className = 'metric';
-      explain.innerHTML = `
-        <h4>How to read these</h4>
-        <ul>
-          <li><strong>Shoulders level</strong>: how tilted shoulders are left-to-right. ≤ 2° is usually fine.</li>
-          <li><strong>Hips level</strong>: pelvis tilt left-to-right. ≤ 2° is usually fine.</li>
-          <li><strong>Head forward</strong>: how far the head sits in front of body center (scaled to shoulder width). ≤ 5% is good.</li>
-          <li><strong>Torso symmetry</strong>: left vs right torso length difference. ≤ 5% is good.</li>
-          <li><strong>Arms/Legs balance</strong>: left vs right length difference in this snapshot. ≤ 10% is fine.</li>
-          <li><em>Tip</em>: Visual estimates from one frame; for best accuracy use straight-on photos with good lighting.</li>
-        </ul>
-      `;
-      results.appendChild(explain);
-      try { results.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+      function suggestionsFromMetrics(mm, limb){
+        const s = [];
+        if (Number.isFinite(mm.forwardHead) && mm.forwardHead > 0.05){ s.push('Strengthen mid-back (lower traps/rhomboids) and deep neck flexors; mobilize pecs'); }
+        if (Number.isFinite(mm.shoulderTilt) && mm.shoulderTilt > 2){ s.push('Improve shoulder stability: lower traps, serratus anterior; anti-lateral flexion'); }
+        if (Number.isFinite(mm.hipTilt) && mm.hipTilt > 2){ s.push('Glute medius and lateral core work for hip leveling'); }
+        if (mm.symmetry && Number.isFinite(mm.symmetry.torsoDiffPct) && mm.symmetry.torsoDiffPct > 0.05){ s.push('Balance obliques/QL; add carries and anti-rotation'); }
+        if (limb && Number.isFinite(limb.armDiff) && limb.armDiff > 0.1){ s.push('Unilateral arm training to balance sides'); }
+        if (limb && Number.isFinite(limb.legDiff) && limb.legDiff > 0.1){ s.push('Single-leg work (split squats, step-ups) to balance legs'); }
+        return s;
+      }
+      const sugg = suggestionsFromMetrics(m, limb);
+      const suggCard = document.createElement('div'); suggCard.className='metric'; suggCard.innerHTML = `
+        <h4>Personalized Suggestions</h4>
+        ${sugg.length? `<ul>${sugg.map(x=>`<li>${x}</li>`).join('')}</ul>` : '<p class="muted">Looks good. Keep training balanced.</p>'}
+      `; results.appendChild(suggCard);
 
-      const ls = key(kps,'left_shoulder'), rs = key(kps,'right_shoulder');
-      const lh = key(kps,'left_hip'), rh = key(kps,'right_hip');
-      const lines = [];
-      if (Number.isFinite(m.shoulderTilt)){
-        let t = 'Shoulders: level';
-        if (ls && rs){
-          const sw = Math.hypot(ls.x - rs.x, ls.y - rs.y) || 1;
-          const vr = Math.abs(ls.y - rs.y) / sw;
-          const vrPct = Math.round(vr * 100);
-          const side = (ls.y < rs.y) ? 'left' : (rs.y < ls.y) ? 'right' : 'level';
-          if (side !== 'level') t = `Shoulders: ${side} higher by ${vrPct}% (≈ ${m.shoulderTilt.toFixed(1)}°)`;
-        }
-        lines.push(t);
-      }
-      if (Number.isFinite(m.hipTilt)){
-        let t = 'Hips: level';
-        if (lh && rh){
-          if (lh.y < rh.y && m.hipTilt > 0.5) t = `Hips: left higher by ${m.hipTilt.toFixed(1)}°`;
-          else if (rh.y < lh.y && m.hipTilt > 0.5) t = `Hips: right higher by ${m.hipTilt.toFixed(1)}°`;
-        }
-        lines.push(t);
-      }
-      if (Number.isFinite(m.forwardHead)) lines.push((m.forwardHead*100)<=5 ? 'Head: neutral' : `Head: ${Math.round(m.forwardHead*100)}% forward`);
-      if (m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct)) lines.push((m.symmetry.torsoDiffPct*100)<=5 ? 'Torso: symmetric' : `Torso: ${Math.round(m.symmetry.torsoDiffPct*100)}% L/R difference`);
-      if (limb && Number.isFinite(limb.armDiff) && Number.isFinite(limb.legDiff)){
-        const a = Math.round(limb.armDiff*100), g = Math.round(limb.legDiff*100);
-        lines.push((a<=10 && g<=10) ? 'Arms/Legs: balanced' : `Arms: ${a}% diff · Legs: ${g}% diff`);
-      }
-      setStatus(lines.join(' · '));
+      setStatus('Body fat (est.): ' + (bf ?? '—'));
     }catch(err){ console.error(err); setStatus('Analysis failed'); const msg=(err&&err.message)?String(err.message).slice(0,120):''; if(msg) setTimeout(()=>setStatus(`Analysis failed: ${msg}`),10); }
   }
 
@@ -500,12 +457,12 @@
     if (bestView){
       // Ensure scaling matches the image we are drawing on
       window.__fitlife_last_input_size = { w: bestView.img.naturalWidth || bestView.img.width, h: bestView.img.naturalHeight || bestView.img.height };
-      drawOverlayFallback(bestView.img, bestView.kps, { scores: { posture: postureScore, symmetry: symmetryScore }, summaries: [shoulderStr, hipStr, headStr, torsoStr], showLandmarks: false });
+      drawOverlayFallback(bestView.img, bestView.kps, { mode: 'bf-only' });
       try{ document.getElementById('bs-annotated')?.scrollIntoView({behavior:'smooth', block:'center'}); }catch{}
       try { const snap=document.getElementById('bs-annotated').toDataURL('image/png'); const img=new Image(); img.src=snap; img.style.width='100%'; img.style.borderRadius='12px'; img.style.border='1px solid var(--border)'; const holder=document.createElement('div'); holder.className='metric'; holder.innerHTML='<h4>Annotated view</h4>'; holder.appendChild(img); results.prepend(holder); } catch {}
     }
 
-    setStatus('Done · ' + `Shoulder ${fmtDeg(fusedM.shoulderTilt)} · Hip ${fmtDeg(fusedM.hipTilt)} · FHP ${fmtPct(fusedM.forwardHead)} · Torso ${fmtPct(fusedM.torsoDiffPct)} · Arms ${fmtPct(limb?.armDiff)} · Legs ${fmtPct(limb?.legDiff)}`);
+    setStatus('Body fat (est.): ' + (window.__fitlife_last_bf || '—'));
   }
   window.gcAnalyzeFallback = guidedAnalyzeFallback;
 
