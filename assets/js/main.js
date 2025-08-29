@@ -397,7 +397,8 @@
   // --- Service worker registration ---
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      // Use relative path so it works under GitHub Pages project subpath
+      navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
     });
   }
 })();

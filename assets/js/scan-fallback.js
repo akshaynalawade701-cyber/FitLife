@@ -31,6 +31,11 @@
       try { await loadScript('https://unpkg.com/@tensorflow-models/pose-detection@2.3.1/dist/pose-detection.js'); } catch {}
       PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
     }
+    if (!PD) {
+      // Cloudflare CDN as last resort
+      try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tensorflow-models-pose-detection/2.3.1/pose-detection.min.js'); } catch {}
+      PD = window.poseDetection || window.poseDetectionModule || window.pose_detection || window['pose-detection'];
+    }
     return PD;
   }
 
@@ -42,6 +47,7 @@
     }
     try { await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.min.js'); } catch {}
     if (!(window.tf && window.tf.setWasmPaths)) { try { await loadScript('https://unpkg.com/@tensorflow/tfjs-backend-wasm@4.13.0/dist/tf-backend-wasm.min.js'); } catch {} }
+    if (!(window.tf && window.tf.setWasmPaths)) { try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.13.0/tf.min.js'); } catch {} }
     const PD = await resolvePoseDetection();
     if (!PD || !window.tf) throw new Error('pose-detection unavailable');
     try {
