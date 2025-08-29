@@ -441,6 +441,7 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
     ctx.fillText(text, x, y);
   };
 
+  const bfOnly = options.mode === 'bf-only';
   // Skeleton lines
   const pairs = [
     ['left_shoulder','right_shoulder'], ['left_hip','right_hip'],
@@ -450,12 +451,16 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
     ['right_hip','right_knee'], ['right_knee','right_ankle'],
     ['left_shoulder','left_hip'], ['right_shoulder','right_hip']
   ];
-  ctx.lineWidth = Math.max(2, w/400);
-  ctx.strokeStyle = 'rgba(7,192,162,0.9)';
-  pairs.forEach(([a,b]) => { const p=get(a), q=get(b); if (p && q) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); } });
+  if (!bfOnly) {
+    ctx.lineWidth = Math.max(2, w/400);
+    ctx.strokeStyle = 'rgba(7,192,162,0.9)';
+    pairs.forEach(([a,b]) => { const p=get(a), q=get(b); if (p && q) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); } });
+  }
 
   // Points
-  keypoints.forEach(k => { if (!k || (k.score !== undefined && k.score < 0.3)) return; ctx.fillStyle = '#07c0a2'; ctx.beginPath(); ctx.arc(k.x, k.y, Math.max(3, w/200), 0, Math.PI*2); ctx.fill(); });
+  if (!bfOnly) {
+    keypoints.forEach(k => { if (!k || (k.score !== undefined && k.score < 0.3)) return; ctx.fillStyle = '#07c0a2'; ctx.beginPath(); ctx.arc(k.x, k.y, Math.max(3, w/200), 0, Math.PI*2); ctx.fill(); });
+  }
 
   // Metric overlays
   const ls = get('left_shoulder'), rs = get('right_shoulder');
@@ -478,30 +483,30 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
   ctx.restore();
 
   // Shoulder tilt
-  if (ls && rs && ms && metrics && Number.isFinite(metrics.shoulderTilt)) {
+  if (!bfOnly && ls && rs && ms && metrics && Number.isFinite(metrics.shoulderTilt)) {
     ctx.strokeStyle = 'rgba(255,255,0,0.9)'; ctx.beginPath(); ctx.moveTo(ls.x, ls.y); ctx.lineTo(rs.x, rs.y); ctx.stroke();
     drawBadge(ms.x, ms.y - 28, `Shoulders level: ${metrics.shoulderTilt.toFixed(1)}° off (≤ 2°)`);
   }
   // Hip tilt
-  if (lh && rh && mh && metrics && Number.isFinite(metrics.hipTilt)) {
+  if (!bfOnly && lh && rh && mh && metrics && Number.isFinite(metrics.hipTilt)) {
     ctx.strokeStyle = 'rgba(255,140,0,0.9)'; ctx.beginPath(); ctx.moveTo(lh.x, lh.y); ctx.lineTo(rh.x, rh.y); ctx.stroke();
     drawBadge(mh.x, mh.y + 8, `Hips level: ${metrics.hipTilt.toFixed(1)}° off (≤ 2°)`);
   }
   // Forward head offset
-  if (ms && nose && metrics && Number.isFinite(metrics.forwardHead)) {
+  if (!bfOnly && ms && nose && metrics && Number.isFinite(metrics.forwardHead)) {
     ctx.strokeStyle = 'rgba(173,216,230,0.9)'; ctx.beginPath(); ctx.moveTo(nose.x, nose.y); ctx.lineTo(ms.x, nose.y); ctx.stroke();
     drawBadge(nose.x, Math.max(4, nose.y - 24), `Head forward: ${(metrics.forwardHead*100).toFixed(0)}% (≤ 5%)`);
   }
   // Torso diff
-  if (ls && lh && rs && rh && metrics && metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) {
+  if (!bfOnly && ls && lh && rs && rh && metrics && metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) {
     const midTorso = mid(ms || ls, mh || lh) || { x: (w*0.05), y: (h*0.5) };
     drawBadge(midTorso.x, midTorso.y, `Torso symmetry: ${(metrics.symmetry.torsoDiffPct*100).toFixed(0)}% diff (≤ 5%)`);
   }
   // Limb diffs
-  if (limb && Number.isFinite(limb.armDiff)) {
+  if (!bfOnly && limb && Number.isFinite(limb.armDiff)) {
     drawBadge(w*0.04, h*0.08, `Arms balance: ${(limb.armDiff*100).toFixed(0)}% diff (≤ 10%)`);
   }
-  if (limb && Number.isFinite(limb.legDiff)) {
+  if (!bfOnly && limb && Number.isFinite(limb.legDiff)) {
     drawBadge(w*0.04, h*0.08 + Math.max(28, h/20), `Legs balance: ${(limb.legDiff*100).toFixed(0)}% diff (≤ 10%)`);
   }
 
@@ -678,8 +683,9 @@ async function analyzeAndRender() {
     }
     const limb = limbImbalanceFromKeypoints(kps);
 
-    // Draw overlay with metrics
-    drawOverlay(baseImage, kps, metrics, limb);
+    // Draw overlay with metrics (or BF-only)
+    const bfOnly = document.getElementById('bs-bf-only')?.checked;
+    drawOverlay(baseImage, kps, metrics, limb, { mode: bfOnly ? 'bf-only' : undefined });
     try { document.getElementById('bs-annotated')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
     // Snapshot into results
     try {
@@ -739,6 +745,11 @@ async function analyzeAndRender() {
     const ls = key(kps,'left_shoulder'), rs = key(kps,'right_shoulder');
     const lh = key(kps,'left_hip'), rh = key(kps,'right_hip');
     const parts = [];
+    if (bfOnly){
+      parts.push(`Body fat (est.): ${bf ?? '—'}`);
+      setStatus(parts.join(' · '));
+      return;
+    }
     if (Number.isFinite(metrics.shoulderTilt)){
       let t = 'Shoulders: level';
       if (ls && rs){
