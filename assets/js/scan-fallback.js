@@ -64,7 +64,7 @@
         setStatus('Model ready (cpu)');
         return det;
       } catch (err) {
-        setStatus('Model load failed');
+        setStatus('Model load failed. Check network or try a different photo.');
         throw e;
       }
     }
