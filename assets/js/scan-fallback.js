@@ -419,8 +419,9 @@
       if (Number.isFinite(m.shoulderTilt)){
         let t = 'Shoulders: level';
         if (ls && rs){
-          if (ls.y < rs.y && m.shoulderTilt > 0.5) t = `Shoulders: left higher by ${m.shoulderTilt.toFixed(1)}°`;
-          else if (rs.y < ls.y && m.shoulderTilt > 0.5) t = `Shoulders: right higher by ${m.shoulderTilt.toFixed(1)}°`;
+          const above = Math.max(0, (m.shoulderTiltRaw ?? m.shoulderTilt) - 45);
+          const baseStr = (ls.y < rs.y && m.shoulderTilt > 0.5) ? `Shoulders: left higher by ${m.shoulderTilt.toFixed(1)}°` : (rs.y < ls.y && m.shoulderTilt > 0.5) ? `Shoulders: right higher by ${m.shoulderTilt.toFixed(1)}°` : 'Shoulders: level';
+          t = above > 0.1 ? `${baseStr} (exceeds 45° by ${above.toFixed(1)}°)` : baseStr;
         }
         lines.push(t);
       }

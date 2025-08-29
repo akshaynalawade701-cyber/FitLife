@@ -119,18 +119,19 @@ function computeMetricsFromKeypoints(kps) {
 
   let shoulderTilt = null;
   let hipTilt = null;
+  let shoulderTiltRaw = null;
+  let hipTiltRaw = null;
   let forwardHead = null;
   let symmetry = null;
 
   if (leftShoulder && rightShoulder) {
-    shoulderTilt = Math.abs(lineTiltDegrees(leftShoulder, rightShoulder));
-    shoulderTilt = Math.abs(shoulderTilt); // 0 = level, ~90 = vertical
-    // normalize to 0-45 where smaller is better
-    shoulderTilt = Math.min(45, Math.abs(shoulderTilt));
+    shoulderTiltRaw = Math.abs(lineTiltDegrees(leftShoulder, rightShoulder));
+    // Clamp for display but keep raw for deltas
+    shoulderTilt = Math.min(45, Math.abs(shoulderTiltRaw));
   }
   if (leftHip && rightHip) {
-    hipTilt = Math.abs(lineTiltDegrees(leftHip, rightHip));
-    hipTilt = Math.min(45, Math.abs(hipTilt));
+    hipTiltRaw = Math.abs(lineTiltDegrees(leftHip, rightHip));
+    hipTilt = Math.min(45, Math.abs(hipTiltRaw));
   }
   if (nose && leftShoulder && rightShoulder) {
     // Approx forward head by horizontal offset of nose from shoulder midpoint relative to shoulder width
@@ -152,7 +153,7 @@ function computeMetricsFromKeypoints(kps) {
     symmetry = { torsoDiffPct };
   }
 
-  return { shoulderTilt, hipTilt, forwardHead, symmetry };
+  return { shoulderTilt, hipTilt, forwardHead, symmetry, shoulderTiltRaw, hipTiltRaw };
 }
 
 function summarizeMetrics(m) {
@@ -726,8 +727,9 @@ async function analyzeAndRender() {
     if (Number.isFinite(metrics.shoulderTilt)){
       let t = 'Shoulders: level';
       if (ls && rs){
-        if (ls.y < rs.y && metrics.shoulderTilt > 0.5) t = `Shoulders: left higher by ${metrics.shoulderTilt.toFixed(1)}°`;
-        else if (rs.y < ls.y && metrics.shoulderTilt > 0.5) t = `Shoulders: right higher by ${metrics.shoulderTilt.toFixed(1)}°`;
+        const above = Math.max(0, (metrics.shoulderTiltRaw ?? metrics.shoulderTilt) - 45);
+        const baseStr = (ls.y < rs.y && metrics.shoulderTilt > 0.5) ? `Shoulders: left higher by ${metrics.shoulderTilt.toFixed(1)}°` : (rs.y < ls.y && metrics.shoulderTilt > 0.5) ? `Shoulders: right higher by ${metrics.shoulderTilt.toFixed(1)}°` : 'Shoulders: level';
+        t = above > 0.1 ? `${baseStr} (exceeds 45° by ${above.toFixed(1)}°)` : baseStr;
       }
       parts.push(t);
     }
