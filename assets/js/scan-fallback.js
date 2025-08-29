@@ -251,14 +251,15 @@
       const hasImg = imgFiles.length>0;
       const hasVid = vidFiles.length>0;
       if(!hasImg && !hasVid){ setStatus('Please upload photos or a video first.'); return; }
+      const timeout = new Promise((_,rej)=> setTimeout(()=> rej(new Error('Analysis timed out')), 15000));
       let det = null;
       try { det = await ensureFallbackDetector(); } catch (_) { det = null; }
 
       let kps = null; let baseImage = null;
       if(hasImg){
-        for(const f of imgFiles){ const url=URL.createObjectURL(f); const img=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; }); const mpKps = await estimateWithMediaPipe(img); if (mpKps && mpKps.length) { kps = mpKps; baseImage = img; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
+        for(const f of imgFiles){ const url=URL.createObjectURL(f); const img=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; }); const mpKps = await Promise.race([estimateWithMediaPipe(img), timeout]); if (mpKps && mpKps.length) { kps = mpKps; baseImage = img; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
       } else if (hasVid){
-        for (const f of vidFiles){ const url=URL.createObjectURL(f); const v=$('#bs-video-el'); await new Promise(res=>{ v.onloadeddata=()=>res(); v.src=url; }); try{ await v.play(); }catch{}; v.pause(); if (v.videoWidth===0||v.videoHeight===0){ URL.revokeObjectURL(url); continue; } const mpKps=await estimateWithMediaPipe(v); if (mpKps && mpKps.length) { kps=mpKps; baseImage=v; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
+        for (const f of vidFiles){ const url=URL.createObjectURL(f); const v=$('#bs-video-el'); await new Promise(res=>{ v.onloadeddata=()=>res(); v.src=url; }); try{ await v.play(); }catch{}; v.pause(); if (v.videoWidth===0||v.videoHeight===0){ URL.revokeObjectURL(url); continue; } const mpKps=await Promise.race([estimateWithMediaPipe(v), timeout]); if (mpKps && mpKps.length) { kps=mpKps; baseImage=v; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
       }
 
       if(!kps){ setStatus('No person detected. Try a clearer, well-lit image.'); return; }

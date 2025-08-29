@@ -399,20 +399,8 @@ function limbImbalanceFromKeypoints(kps) {
   return { armDiff, legDiff };
 }
 
-// Enhance renderResults to include limb imbalance
+// Keep original renderResults; limb balance is added explicitly in analyze step
 const _renderResults = renderResults;
-function renderResults(report) {
-  _renderResults(report);
-  const results = document.getElementById('bs-results');
-  const limb = document.createElement('div');
-  limb.className = 'metric';
-  limb.innerHTML = `
-    <h4>Limb Balance</h4>
-    <div class="kv"><span>Arms L/R diff</span><span>${formatPct(report.limb?.armDiff)}</span></div>
-    <div class="kv"><span>Legs L/R diff</span><span>${formatPct(report.limb?.legDiff)}</span></div>
-  `;
-  results.appendChild(limb);
-}
 
 function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
   const canvas = document.getElementById('bs-annotated');
