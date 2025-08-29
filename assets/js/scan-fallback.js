@@ -243,6 +243,7 @@
 
   // Preview thumbnails with delete buttons in fallback
   function fileKey(f){ return `${f.name}_${f.size}_${f.lastModified||0}`; }
+  const keypointCache = new Map();
   const skipImages = new Set();
   const skipVideos = new Set();
   function buildImagePreviews(){ const input = $('#bs-images'); const grid = $('#bs-previews'); if (!input || !grid) return; grid.innerHTML=''; Array.from(input.files||[]).forEach(f=>{ const key=fileKey(f); const url=URL.createObjectURL(f); const wrap=document.createElement('div'); wrap.className='thumb'; const img=new Image(); img.src=url; img.onload=()=>URL.revokeObjectURL(url); img.style.width='100%'; img.style.display='block'; img.style.borderRadius='10px'; const del=document.createElement('button'); del.className='del'; del.textContent='✕'; del.addEventListener('click', ()=>{ skipImages.add(key); wrap.remove(); }); wrap.appendChild(img); wrap.appendChild(del); grid.appendChild(wrap); }); }
@@ -265,9 +266,52 @@
 
       let kps = null; let baseImage = null;
       if(hasImg){
-        for(const f of imgFiles){ const url=URL.createObjectURL(f); const img=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; }); const mpKps = await Promise.race([estimateWithMediaPipe(img), timeout]); if (mpKps && mpKps.length) { kps = mpKps; baseImage = img; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
+        for(const f of imgFiles){
+          const cacheId = fileKey(f);
+          const url=URL.createObjectURL(f);
+          const img=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; });
+          let mpKps = keypointCache.get(cacheId);
+          if (!mpKps){
+            // best-of-N: run estimator multiple times and pick the set with most confident shoulder-hip landmarks
+            const runs = [];
+            for (let iRun=0;iRun<3;iRun++){
+              try { const k = await Promise.race([estimateWithMediaPipe(img), timeout]); if (Array.isArray(k) && k.length) runs.push(k); } catch {}
+            }
+            const score = (k)=>{
+              const sL = k.find(p=>p.name==='left_shoulder'); const sR = k.find(p=>p.name==='right_shoulder');
+              const hL = k.find(p=>p.name==='left_hip'); const hR = k.find(p=>p.name==='right_hip');
+              return (sL?.score||0)+(sR?.score||0)+(hL?.score||0)+(hR?.score||0);
+            };
+            runs.sort((a,b)=> score(b)-score(a));
+            mpKps = runs[0] || [];
+            keypointCache.set(cacheId, mpKps);
+          }
+          if (mpKps && mpKps.length) { kps = mpKps; baseImage = img; URL.revokeObjectURL(url); break; }
+          URL.revokeObjectURL(url);
+        }
       } else if (hasVid){
-        for (const f of vidFiles){ const url=URL.createObjectURL(f); const v=$('#bs-video-el'); await new Promise(res=>{ v.onloadeddata=()=>res(); v.src=url; }); try{ await v.play(); }catch{}; v.pause(); if (v.videoWidth===0||v.videoHeight===0){ URL.revokeObjectURL(url); continue; } const mpKps=await Promise.race([estimateWithMediaPipe(v), timeout]); if (mpKps && mpKps.length) { kps=mpKps; baseImage=v; URL.revokeObjectURL(url); break; } URL.revokeObjectURL(url); }
+        for (const f of vidFiles){
+          const url=URL.createObjectURL(f);
+          const v=$('#bs-video-el');
+          await new Promise(res=>{ v.onloadeddata=()=>res(); v.src=url; });
+          try{ await v.play(); }catch{}; v.pause();
+          // Deterministic frame capture
+          try { v.currentTime = Math.min(0.1, v.duration||0); } catch {}
+          if (v.videoWidth===0||v.videoHeight===0){ URL.revokeObjectURL(url); continue; }
+          const runs = [];
+          for (let iRun=0;iRun<2;iRun++){
+            try { const k = await Promise.race([estimateWithMediaPipe(v), timeout]); if (Array.isArray(k) && k.length) runs.push(k); } catch {}
+          }
+          const score = (k)=>{
+            const sL = k.find(p=>p.name==='left_shoulder'); const sR = k.find(p=>p.name==='right_shoulder');
+            const hL = k.find(p=>p.name==='left_hip'); const hR = k.find(p=>p.name==='right_hip');
+            return (sL?.score||0)+(sR?.score||0)+(hL?.score||0)+(hR?.score||0);
+          };
+          runs.sort((a,b)=> score(b)-score(a));
+          const mpKps = runs[0] || [];
+          if (mpKps && mpKps.length) { kps=mpKps; baseImage=v; URL.revokeObjectURL(url); break; }
+          URL.revokeObjectURL(url);
+        }
       }
 
       if(!kps){ setStatus('No person detected. Try a clearer, well-lit image.'); return; }
