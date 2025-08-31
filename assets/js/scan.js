@@ -500,23 +500,34 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
       const bfStr = window.__fitlife_last_bf || null;
       const sex = window.__fitlife_last_sex || 'male';
       const bfPct = bfStr ? parseInt(String(bfStr).replace(/[^0-9]/g,''),10) : NaN;
-      // Heatmap: lower abdomen
-      if (Number.isFinite(bfPct) && bfPct>=18) {
-        const y1 = mh ? Math.min(h-8, mh.y + (h*0.06)) : h*0.6;
-        const y0 = y1 - (h*0.12);
-        drawSoftRect(w*0.2, y0, w*0.6, Math.max(12, y1-y0), 'rgba(255,99,71,0.18)');
+      // Torso bounding box and anchors
+      const torsoXs = [ls?.x, rs?.x, lh?.x, rh?.x].filter(Number.isFinite);
+      const torsoYs = [ls?.y, rs?.y, lh?.y, rh?.y].filter(Number.isFinite);
+      const xL = torsoXs.length ? Math.max(8, Math.min(...torsoXs) - w*0.04) : w*0.2;
+      const xR = torsoXs.length ? Math.min(w-8, Math.max(...torsoXs) + w*0.04) : w*0.8;
+      const yTop = torsoYs.length ? Math.max(8, Math.min(...torsoYs) - h*0.06) : h*0.25;
+      const yHip = mh ? mh.y : (torsoYs.length ? Math.max(...torsoYs) : h*0.65);
+      const yShoulder = ms ? ms.y : (torsoYs.length ? Math.min(...torsoYs) : h*0.35);
+      const widthTorso = Math.max(12, xR - xL);
+      // Heatmap: lower abdomen band (just above hips)
+      if (!Number.isFinite(bfPct) || bfPct >= 18) {
+        const y0 = Math.min(h-8, yHip - h*0.02);
+        const y1 = Math.min(h-8, y0 + h*0.12);
+        drawSoftRect(xL + widthTorso*0.05, y0, widthTorso*0.90, Math.max(12, y1-y0), 'rgba(255,99,71,0.22)');
       }
-      // Heatmap: upper abdomen
-      if (Number.isFinite(bfPct) && bfPct>=28) {
-        const y1 = ms ? Math.min(h-8, ms.y + (h*0.06)) : h*0.45;
-        const y0 = y1 - (h*0.10);
-        drawSoftRect(w*0.22, y0, w*0.56, Math.max(10, y1-y0), 'rgba(255,140,0,0.16)');
+      // Heatmap: upper abdomen band (mid torso)
+      if (!Number.isFinite(bfPct) || bfPct >= 28) {
+        const y0 = Math.max(yTop, yShoulder + h*0.04);
+        const y1 = Math.min(h-8, y0 + h*0.10);
+        drawSoftRect(xL + widthTorso*0.07, y0, widthTorso*0.86, Math.max(10, y1-y0), 'rgba(255,140,0,0.20)');
       }
-      // Heatmap: hips
-      if (Number.isFinite(bfPct) && ((sex==='female' && bfPct>=22) || bfPct>=25)) {
-        const cxL = w*0.33, cxR = w*0.67, cy = mh? mh.y + (h*0.08) : h*0.68, rx = w*0.12, ry = h*0.09;
-        drawSoftEllipse(cxL, cy, rx, ry, 'rgba(255,99,71,0.16)');
-        drawSoftEllipse(cxR, cy, rx, ry, 'rgba(255,99,71,0.16)');
+      // Heatmap: hips ovals (anchor to hip joints)
+      if (!Number.isFinite(bfPct) || ((sex==='female' && bfPct>=22) || bfPct>=25)) {
+        const hipL = lh || { x: xL + widthTorso*0.25, y: yHip };
+        const hipR = rh || { x: xR - widthTorso*0.25, y: yHip };
+        const rx = widthTorso*0.18, ry = h*0.09;
+        drawSoftEllipse(hipL.x, hipL.y + h*0.06, rx, ry, 'rgba(255,99,71,0.20)');
+        drawSoftEllipse(hipR.x, hipR.y + h*0.06, rx, ry, 'rgba(255,99,71,0.20)');
       }
     } catch {}
     // Muscle weakness hints (no numbers)
