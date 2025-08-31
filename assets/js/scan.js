@@ -440,6 +440,20 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(text, x, y);
   };
+  const drawSoftEllipse = (cx, cy, rx, ry, fillStyle) => {
+    ctx.save();
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  };
+  const drawSoftRect = (x, y, ww, hh, fillStyle) => {
+    ctx.save();
+    ctx.fillStyle = fillStyle;
+    ctx.fillRect(x, y, ww, hh);
+    ctx.restore();
+  };
 
   const bfOnly = options.mode === 'bf-only';
   // Skeleton lines
@@ -482,43 +496,72 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
   if (ms) { ctx.beginPath(); ctx.moveTo(ms.x, 8); ctx.lineTo(ms.x, h - 8); ctx.stroke(); }
   ctx.restore();
 
-  // Shoulder tilt
-  if (!bfOnly && ls && rs && ms && metrics && Number.isFinite(metrics.shoulderTilt)) {
-    ctx.strokeStyle = 'rgba(255,255,0,0.9)'; ctx.beginPath(); ctx.moveTo(ls.x, ls.y); ctx.lineTo(rs.x, rs.y); ctx.stroke();
-    drawBadge(ms.x, ms.y - 28, `Shoulders level: ${metrics.shoulderTilt.toFixed(1)}° off (≤ 2°)`);
-  }
-  // Hip tilt
-  if (!bfOnly && lh && rh && mh && metrics && Number.isFinite(metrics.hipTilt)) {
-    ctx.strokeStyle = 'rgba(255,140,0,0.9)'; ctx.beginPath(); ctx.moveTo(lh.x, lh.y); ctx.lineTo(rh.x, rh.y); ctx.stroke();
-    drawBadge(mh.x, mh.y + 8, `Hips level: ${metrics.hipTilt.toFixed(1)}° off (≤ 2°)`);
-  }
-  // Forward head offset
-  if (!bfOnly && ms && nose && metrics && Number.isFinite(metrics.forwardHead)) {
-    ctx.strokeStyle = 'rgba(173,216,230,0.9)'; ctx.beginPath(); ctx.moveTo(nose.x, nose.y); ctx.lineTo(ms.x, nose.y); ctx.stroke();
-    drawBadge(nose.x, Math.max(4, nose.y - 24), `Head forward: ${(metrics.forwardHead*100).toFixed(0)}% (≤ 5%)`);
-  }
-  // Torso diff
-  if (!bfOnly && ls && lh && rs && rh && metrics && metrics.symmetry && Number.isFinite(metrics.symmetry.torsoDiffPct)) {
-    const midTorso = mid(ms || ls, mh || lh) || { x: (w*0.05), y: (h*0.5) };
-    drawBadge(midTorso.x, midTorso.y, `Torso symmetry: ${(metrics.symmetry.torsoDiffPct*100).toFixed(0)}% diff (≤ 5%)`);
-  }
-  // Limb diffs
-  if (!bfOnly && limb && Number.isFinite(limb.armDiff)) {
-    drawBadge(w*0.04, h*0.08, `Arms balance: ${(limb.armDiff*100).toFixed(0)}% diff (≤ 10%)`);
-  }
-  if (!bfOnly && limb && Number.isFinite(limb.legDiff)) {
-    drawBadge(w*0.04, h*0.08 + Math.max(28, h/20), `Legs balance: ${(limb.legDiff*100).toFixed(0)}% diff (≤ 10%)`);
+  // In BF-only: draw soft heatmap and muscle weakness hints
+  if (bfOnly) {
+    try {
+      const bfStr = window.__fitlife_last_bf || null;
+      const sex = window.__fitlife_last_sex || 'male';
+      const bfPct = bfStr ? parseInt(String(bfStr).replace(/[^0-9]/g,''),10) : NaN;
+      // Heatmap: lower abdomen
+      if (Number.isFinite(bfPct) && bfPct>=18) {
+        const y1 = mh ? Math.min(h-8, mh.y + (h*0.06)) : h*0.6;
+        const y0 = y1 - (h*0.12);
+        drawSoftRect(w*0.2, y0, w*0.6, Math.max(12, y1-y0), 'rgba(255,99,71,0.18)');
+      }
+      // Heatmap: upper abdomen
+      if (Number.isFinite(bfPct) && bfPct>=28) {
+        const y1 = ms ? Math.min(h-8, ms.y + (h*0.06)) : h*0.45;
+        const y0 = y1 - (h*0.10);
+        drawSoftRect(w*0.22, y0, w*0.56, Math.max(10, y1-y0), 'rgba(255,140,0,0.16)');
+      }
+      // Heatmap: hips
+      if (Number.isFinite(bfPct) && ((sex==='female' && bfPct>=22) || bfPct>=25)) {
+        const cxL = w*0.33, cxR = w*0.67, cy = mh? mh.y + (h*0.08) : h*0.68, rx = w*0.12, ry = h*0.09;
+        drawSoftEllipse(cxL, cy, rx, ry, 'rgba(255,99,71,0.16)');
+        drawSoftEllipse(cxR, cy, rx, ry, 'rgba(255,99,71,0.16)');
+      }
+    } catch {}
+    // Muscle weakness hints (no numbers)
+    try {
+      const m = window.__fitlife_last_metrics || {};
+      // Forward head: neck/upper thoracic
+      if (ms && Number.isFinite(m.forwardHead) && m.forwardHead > 0.05) {
+        const nx = ms.x - w*0.12, ny = (nose ? nose.y : (ms.y - h*0.12));
+        drawSoftRect(nx, ny, w*0.24, h*0.10, 'rgba(255,215,0,0.18)');
+      }
+      // Shoulder tilt: highlight higher trap side
+      if (ls && rs && Number.isFinite(m.shoulderTilt) && m.shoulderTilt > 2) {
+        const leftHigher = ls.y < rs.y;
+        const sx = leftHigher ? ls.x : rs.x;
+        const sy = leftHigher ? ls.y : rs.y;
+        drawSoftEllipse(sx, sy, w*0.06, h*0.05, 'rgba(255,215,0,0.22)');
+      }
+      // Hip tilt: highlight higher hip/glute med side
+      if (lh && rh && Number.isFinite(m.hipTilt) && m.hipTilt > 2) {
+        const leftHigher = lh.y < rh.y;
+        const hx = leftHigher ? lh.x : rh.x;
+        const hy = leftHigher ? lh.y : rh.y;
+        drawSoftEllipse(hx, hy + h*0.05, w*0.07, h*0.06, 'rgba(255,215,0,0.22)');
+      }
+      // Torso symmetry: both obliques
+      if (ms && mh && m.symmetry && Number.isFinite(m.symmetry.torsoDiffPct) && m.symmetry.torsoDiffPct > 0.05) {
+        drawSoftRect(w*0.12, (ms.y+mh.y)/2 - h*0.12, w*0.08, h*0.20, 'rgba(255,215,0,0.16)');
+        drawSoftRect(w*0.80, (ms.y+mh.y)/2 - h*0.12, w*0.08, h*0.20, 'rgba(255,215,0,0.16)');
+      }
+    } catch {}
   }
 
-  // Scores and summaries (top-right)
-  const scores = options.scores || null;
-  const summaries = options.summaries || [];
-  let y = 20;
-  if (scores){
-    drawCornerText(w - 210, y, `Posture score: ${scores.posture}`); y += 18;
-    drawCornerText(w - 210, y, `Symmetry score: ${scores.symmetry}`); y += 22;
+  // No scores/summaries in BF-only mode
+  if (!bfOnly) {
+    const scores = options.scores || null;
+    const summaries = options.summaries || [];
+    let y = 20;
+    if (scores){
+      drawCornerText(w - 210, y, `Posture score: ${scores.posture}`); y += 18;
+      drawCornerText(w - 210, y, `Symmetry score: ${scores.symmetry}`); y += 22;
+    }
+    summaries.forEach(s => { drawCornerText(w - 210, y, s); y += 18; });
   }
-  summaries.forEach(s => { drawCornerText(w - 210, y, s); y += 18; });
 }
 
 // Wire unit toggles
