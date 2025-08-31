@@ -472,9 +472,7 @@ function drawOverlay(baseImage, keypoints, metrics, limb, options = {}) {
   }
 
   // Points
-  if (!bfOnly) {
-    keypoints.forEach(k => { if (!k || (k.score !== undefined && k.score < 0.3)) return; ctx.fillStyle = '#07c0a2'; ctx.beginPath(); ctx.arc(k.x, k.y, Math.max(3, w/200), 0, Math.PI*2); ctx.fill(); });
-  }
+  // landmarks hidden in BF-only
 
   // Metric overlays
   const ls = get('left_shoulder'), rs = get('right_shoulder');

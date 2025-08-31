@@ -237,10 +237,10 @@
       pairs.forEach(([a,b])=>{ const p=get(a), q=get(b); if(p&&q){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }});
     }
     if (options && options.showLandmarks && !bfOnly) {
-      keypoints.forEach(k=>{ if(!k||(k.score!==undefined && k.score<0.3)) return; ctx.fillStyle='#07c0a2'; ctx.beginPath(); ctx.arc(k.x,k.y,Math.max(3,w/200),0,Math.PI*2); ctx.fill(); });
+      scaledKeypoints.forEach(k=>{ if(!k||(k.score!==undefined && k.score<0.3)) return; ctx.fillStyle='#07c0a2'; ctx.beginPath(); ctx.arc(k.x,k.y,Math.max(3,w/200),0,Math.PI*2); ctx.fill(); });
     }
     // Silhouette outline from convex hull of confident keypoints
-    const pts = keypoints.filter(k=>!k||k.score===undefined||k.score>=0.4).map(k=>({x:k.x,y:k.y}));
+    const pts = scaledKeypoints.filter(k=>!k||k.score===undefined||k.score>=0.4).map(k=>({x:k.x,y:k.y}));
     if (pts.length>=3){
       const cross=(o,a,b)=>((a.x-o.x)*(b.y-o.y))-((a.y-o.y)*(b.x-o.x));
       const sorted=[...pts].sort((a,b)=>a.x===b.x? a.y-b.y : a.x-b.x);
@@ -287,7 +287,7 @@
       ctx.restore();
     }
     // Title
-    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(8,8,220,30); ctx.fillStyle='#fff'; ctx.font=`${Math.max(14, Math.floor(w/40))}px ui-sans-serif, system-ui`; ctx.fillText('FitLife Body Scan',16,30);
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(8,8,260,30); ctx.fillStyle='#fff'; ctx.font=`${Math.max(14, Math.floor(w/40))}px ui-sans-serif, system-ui`; ctx.fillText('FitLife Body Fat & Guidance',16,30);
   }
 
   // Preview thumbnails with delete buttons in fallback
