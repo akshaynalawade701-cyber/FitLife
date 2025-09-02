@@ -1,4 +1,4 @@
- # FitLife — Fitness Website
+# FitLife — Fitness Website
 
 A fast, responsive static site with calculators, a workout plan builder, and a nutrition tracker. All data stays local in your browser.
 
