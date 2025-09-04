@@ -1,12 +1,15 @@
 name: Assistant push
 on:
   workflow_dispatch:
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
   push:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '/assistant push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,9 +27,124 @@ jobs:
           git config user.email "fitlife-assistant@users.noreply.github.com"
           git remote set-url origin git@github.com:akshaynalawade701-cyber/FitLife.git
 
-      - name: Apply changes and push
+      - name: Apply DEXA changes (only if missing) and cache-bust
+        shell: bash
         run: |
-          # (I will edit files in a follow-up run of this workflow)
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, time
+          changed = False
+          ts = "DEXA" + str(int(time.time()))
+          dexa = """
+// DEXA overlay start
+;(function(){
+  try {
+    const canvas = (typeof ctx !== 'undefined' && ctx && ctx.canvas) ? ctx.canvas : null;
+    if (!canvas || typeof ctx === 'undefined') return;
+
+    const src = (typeof landmarks !== 'undefined' && Array.isArray(landmarks))
+      ? landmarks
+      : ((typeof keypoints !== 'undefined' && Array.isArray(keypoints)) ? keypoints : (window.__fitlife_last_keypoints || []));
+    if (!Array.isArray(src) || src.length === 0) return;
+
+    const byName = n => src.find(k => (k.name || k.part) === n) || null;
+    const ls = byName('left_shoulder'), rs = byName('right_shoulder');
+    const lh = byName('left_hip'),     rh = byName('right_hip');
+    if (!ls || !rs || !lh || !rh) return;
+
+    const scx = (ls.x + rs.x) / 2, scy = (ls.y + rs.y) / 2;
+    const hcx = (lh.x + rh.x) / 2, hcy = (lh.y + rh.y) / 2;
+    const torsoH = Math.hypot(scx - hcx, scy - hcy);
+
+    ctx.save();
+    ctx.font = '600 14px system-ui, -apple-system, Segoe UI, Roboto';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    const azY = hcy - torsoH * 0.12;
+    ctx.fillStyle = 'rgba(20,20,20,0.65)'; ctx.fillRect(scx - 80, azY - 14, 160, 28);
+    ctx.fillStyle = '#ffd54f'; ctx.fillText('Android zone', scx, azY);
+
+    const gzY = hcy + torsoH * 0.28;
+    ctx.fillStyle = 'rgba(20,20,20,0.65)'; ctx.fillRect(scx - 72, gzY - 14, 144, 28);
+    ctx.fillStyle = '#90caf9'; ctx.fillText('Gynoid zone', scx, gzY);
+
+    const le = byName('left_elbow'),  re = byName('right_elbow');
+    const lw = byName('left_wrist'),  rw = byName('right_wrist');
+    const lk = byName('left_knee'),   rk = byName('right_knee');
+    const la = byName('left_ankle'),  ra = byName('right_ankle');
+    const drawLimb = (a,b,c,color) => {
+      if (!a || !b) return; const p3 = c || b;
+      ctx.strokeStyle = color; ctx.lineWidth = Math.max(10, torsoH * 0.06); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(p3.x, p3.y); ctx.stroke();
+    };
+    ctx.globalAlpha = 0.18; drawLimb(ls, le, lw, '#90caf980'); drawLimb(rs, re, rw, '#90caf980');
+    ctx.globalAlpha = 0.22; drawLimb(lh, lk, la, '#ffd54f66'); drawLimb(rh, rk, ra, '#ffd54f66');
+    ctx.restore();
+
+    const container = document.getElementById('bs-results') || document.querySelector('.results');
+    if (container) {
+      let card = document.getElementById('dexa-summary');
+      if (!card) { card = document.createElement('div'); card.id = 'dexa-summary'; card.className = 'dexa-card'; container.appendChild(card); }
+      const m = window.__fitlife_last_metrics || {};
+      const bf = (typeof m.bodyFatPercent === 'number') ? m.bodyFatPercent : (typeof m.bfPercent === 'number' ? m.bfPercent : null);
+      const sex = ((document.getElementById('bs-sex')?.value) || m.sex || 'male').toString().toLowerCase();
+      let emphasis = 'Balanced', ratio = '1.0:1';
+      if (bf != null) {
+        const android = (sex === 'male' ? (bf >= 20) : (bf >= 30));
+        emphasis = android ? 'Android-dominant' : 'Gynoid-dominant';
+        ratio = android ? '1.2:1' : '0.9:1';
+      }
+      card.innerHTML = `<div class="dexa-title">DEXA-style summary</div>
+        <div class="dexa-row"><span>Body Fat</span><b>${bf != null ? bf.toFixed(1) + '%': '—'}</b></div>
+        <div class="dexa-row"><span>Distribution</span><b>${emphasis}</b></div>
+        <div class="dexa-row"><span>A:G est.</span><b>${ratio}</b></div>`;
+
+      if (!document.getElementById('dexa-style')) {
+        const style = document.createElement('style'); style.id = 'dexa-style'; style.textContent =
+`.dexa-card{margin-top:8px;padding:10px;border-radius:8px;background:#0f172a0d;border:1px solid #0ea5a533}
+.dexa-title{font-weight:600;margin-bottom:6px;color:#0ea5a5}
+.dexa-row{display:flex;justify-content:space-between;gap:8px;margin:4px 0}
+.dexa-row span{color:#475569}
+.dexa-row b{color:#0b132b}`;
+        document.head.appendChild(style);
+      }
+    }
+  } catch(e) {}
+})();
+/// DEXA overlay end
+"""
+          def inject(path, anchors):
+            p = Path(path)
+            if not p.exists(): return False
+            s = p.read_text(encoding='utf-8')
+            if 'DEXA overlay start' in s: return False
+            for a in anchors:
+              m = re.search(a, s, flags=re.I)
+              if m:
+                end = s.find('\n', m.end())
+                if end == -1: end = len(s)-1
+                p.write_text(s[:end+1] + dexa + s[end+1:], encoding='utf-8')
+                return True
+            return False
+          touched = False
+          touched |= inject('assets/js/scan.js', [r'Heatmap:\s*hips ovals', r'In BF-only:\s*draw soft heatmap'])
+          touched |= inject('assets/js/scan-fallback.js', [r'Fat heatmap overlays'])
+          if touched:
+            idx = Path('index.html')
+            if idx.exists():
+              html = idx.read_text(encoding='utf-8')
+              html2 = re.sub(r'(scan\\.js)(\\?v=[^"\\s]+)?', r'\\1?v=DEXA'+str(int(time.time())), html)
+              html2 = re.sub(r'(scan-fallback\\.js)(\\?v=[^"\\s]+)?', r'\\1?v=DEXA'+str(int(time.time())), html2)
+              if html2 != html:
+                idx.write_text(html2, encoding='utf-8')
+          PY
+
+      - name: Commit and push if changed
+        run: |
           git add -A
-          git commit -m "Assistant update" || echo "No changes"
-          git push origin HEAD:main || true
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Assistant: DEXA overlay + cache-bust"
+          git push origin HEAD:main
