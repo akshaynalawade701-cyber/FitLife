@@ -266,6 +266,86 @@
       ctx.restore();
     }
     // Fat heatmap overlays (BF-only): lower abdomen, upper abdomen, hips
+// DEXA overlay start
+;(function(){
+  try {
+    const canvas = (typeof ctx !== 'undefined' && ctx && ctx.canvas) ? ctx.canvas : null;
+    if (!canvas || typeof ctx === 'undefined') return;
+
+    const kp = (typeof landmarks !== 'undefined' && Array.isArray(landmarks))
+      ? landmarks
+      : ((typeof keypoints !== 'undefined' && Array.isArray(keypoints)) ? keypoints : (window.__fitlife_last_keypoints || []));
+    if (!Array.isArray(kp) || kp.length === 0) return;
+
+    const byName = (n) => kp.find(k => (k.name || k.part) == n) || null;
+    const ls = byName('left_shoulder'), rs = byName('right_shoulder');
+    const lh = byName('left_hip'),     rh = byName('right_hip');
+    if (!ls || !rs || !lh || !rh) return;
+
+    const scx = (ls.x + rs.x) / 2, scy = (ls.y + rs.y) / 2;
+    const hcx = (lh.x + rh.x) / 2, hcy = (lh.y + rh.y) / 2;
+    const torsoH = Math.hypot(scx - hcx, scy - hcy);
+
+    ctx.save();
+    ctx.font = '600 14px system-ui, -apple-system, Segoe UI, Roboto';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // Android
+    const azY = hcy - torsoH * 0.12;
+    ctx.fillStyle = 'rgba(20,20,20,0.65)'; ctx.fillRect(scx - 80, azY - 14, 160, 28);
+    ctx.fillStyle = '#ffd54f'; ctx.fillText('Android zone', scx, azY);
+
+    // Gynoid
+    const gzY = hcy + torsoH * 0.28;
+    ctx.fillStyle = 'rgba(20,20,20,0.65)'; ctx.fillRect(scx - 72, gzY - 14, 144, 28);
+    ctx.fillStyle = '#90caf9'; ctx.fillText('Gynoid zone', scx, gzY);
+
+    // Limb tints
+    const le = byName('left_elbow'),  re = byName('right_elbow');
+    const lw = byName('left_wrist'),  rw = byName('right_wrist');
+    const lk = byName('left_knee'),   rk = byName('right_knee');
+    const la = byName('left_ankle'),  ra = byName('right_ankle');
+    const drawLimb = (a,b,c,color) => {
+      if (!a || !b) return; const p3 = c || b;
+      ctx.strokeStyle = color; ctx.lineWidth = Math.max(10, torsoH * 0.06); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(p3.x, p3.y); ctx.stroke();
+    };
+    ctx.globalAlpha = 0.18; drawLimb(ls, le, lw, '#90caf980'); drawLimb(rs, re, rw, '#90caf980');
+    ctx.globalAlpha = 0.22; drawLimb(lh, lk, la, '#ffd54f66'); drawLimb(rh, rk, ra, '#ffd54f66');
+    ctx.restore();
+
+    // Summary card
+    const container = document.getElementById('results') || document.querySelector('.results');
+    if (container) {
+      let card = document.getElementById('dexa-summary');
+      if (!card) { card = document.createElement('div'); card.id = 'dexa-summary'; card.className = 'dexa-card'; container.appendChild(card); }
+      const m = window.__fitlife_last_metrics || {};
+      const bf = (typeof m.bodyFatPercent === 'number') ? m.bodyFatPercent : (typeof m.bfPercent === 'number' ? m.bfPercent : null);
+      const sex = ((document.getElementById('sex')?.value) || m.sex || 'male').toString().toLowerCase();
+      let emphasis = 'Balanced', ratio = '1.0:1';
+      if (bf != null) {
+        const android = (sex === 'male' ? (bf >= 20) : (bf >= 30));
+        emphasis = android ? 'Android-dominant' : 'Gynoid-dominant';
+        ratio = android ? '1.2:1' : '0.9:1';
+      }
+      card.innerHTML = `<div class="dexa-title">DEXA-style summary</div>
+        <div class="dexa-row"><span>Body Fat</span><b>${bf != null ? bf.toFixed(1) + '%': '—'}</b></div>
+        <div class="dexa-row"><span>Distribution</span><b>${emphasis}</b></div>
+        <div class="dexa-row"><span>A:G est.</span><b>${ratio}</b></div>`;
+
+      if (!document.getElementById('dexa-style')) {
+        const style = document.createElement('style'); style.id = 'dexa-style'; style.textContent =
+`.dexa-card{margin-top:8px;padding:10px;border-radius:8px;background:#0f172a0d;border:1px solid #0ea5a533}
+.dexa-title{font-weight:600;margin-bottom:6px;color:#0ea5a5}
+.dexa-row{display:flex;justify-content:space-between;gap:8px;margin:4px 0}
+.dexa-row span{color:#475569}
+.dexa-row b{color:#0b132b}`;
+        document.head.appendChild(style);
+      }
+    }
+  } catch(e) {}
+})();
+/// DEXA overlay end
     if (bfOnly){
       const sex = window.__fitlife_last_sex || 'male';
       const bf = window.__fitlife_last_bf || null;
