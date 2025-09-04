@@ -3,13 +3,19 @@ on:
   workflow_dispatch:
   issue_comment:
     types: [created]
+  schedule:
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
 
+concurrency:
+  group: dexa-auto-update
+  cancel-in-progress: true
+
 jobs:
   push:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '/assistant push')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '/assistant push') || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +41,7 @@ jobs:
           import re, time
           changed = False
           ts = "DEXA" + str(int(time.time()))
+
           dexa = """
 // DEXA overlay start
 ;(function(){
@@ -129,6 +136,7 @@ jobs:
           touched = False
           touched |= inject('assets/js/scan.js', [r'Heatmap:\s*hips ovals', r'In BF-only:\s*draw soft heatmap'])
           touched |= inject('assets/js/scan-fallback.js', [r'Fat heatmap overlays'])
+
           if touched:
             idx = Path('index.html')
             if idx.exists():
