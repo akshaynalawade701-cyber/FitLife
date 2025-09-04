@@ -1,0 +1,180 @@
+name: Update DEXA overlay and redeploy
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply DEXA edits
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          dexa_snippet = r"""
+// DEXA overlay start
+;(function(){
+  try {
+    const canvas = (typeof ctx !== 'undefined' && ctx && ctx.canvas) ? ctx.canvas : null;
+    if (!canvas || typeof ctx === 'undefined') return;
+    const cw = canvas.width, ch = canvas.height;
+
+    const kpSource = (typeof landmarks !== 'undefined' && Array.isArray(landmarks))
+      ? landmarks
+      : ((typeof keypoints !== 'undefined' && Array.isArray(keypoints))
+        ? keypoints
+        : (window.__fitlife_last_keypoints || []));
+    if (!Array.isArray(kpSource) || kpSource.length === 0) return;
+
+    const byName = (n) => kpSource.find(k => (k.name || k.part) === n) || null;
+
+    const ls = byName('left_shoulder'),  rs = byName('right_shoulder');
+    const lh = byName('left_hip'),       rh = byName('right_hip');
+    if (!ls || !rs || !lh || !rh) return;
+
+    const scx = (ls.x + rs.x) / 2, scy = (ls.y + rs.y) / 2;
+    const hcx = (lh.x + rh.x) / 2, hcy = (lh.y + rh.y) / 2;
+    const torsoH = Math.hypot(scx - hcx, scy - hcy);
+
+    ctx.save();
+    ctx.font = '600 14px system-ui, -apple-system, Segoe UI, Roboto';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // Android label near lower abdomen
+    const azY = hcy - torsoH * 0.12;
+    ctx.fillStyle = 'rgba(20,20,20,0.65)'; ctx.fillRect(scx - 80, azY - 14, 160, 28);
+    ctx.fillStyle = '#ffd54f'; ctx.fillText('Android zone', scx, azY);
+
+    // Gynoid label near hips
+    const gzY = hcy + torsoH * 0.28;
+    ctx.fillStyle = 'rgba(20,20,20,0.65)'; ctx.fillRect(scx - 72, gzY - 14, 144, 28);
+    ctx.fillStyle = '#90caf9'; ctx.fillText('Gynoid zone', scx, gzY);
+
+    // Limb tints (soft)
+    const le = byName('left_elbow'),   re = byName('right_elbow');
+    const lw = byName('left_wrist'),   rw = byName('right_wrist');
+    const lk = byName('left_knee'),    rk = byName('right_knee');
+    const la = byName('left_ankle'),   ra = byName('right_ankle');
+
+    const drawLimb = (a,b,c,color) => {
+      if (!a || !b) return; const p3 = c || b;
+      ctx.strokeStyle = color; ctx.lineWidth = Math.max(10, torsoH * 0.06); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(p3.x, p3.y); ctx.stroke();
+    };
+
+    ctx.globalAlpha = 0.18; drawLimb(ls, le, lw, '#90caf980'); drawLimb(rs, re, rw, '#90caf980');
+    ctx.globalAlpha = 0.22; drawLimb(lh, lk, la, '#ffd54f66'); drawLimb(rh, rk, ra, '#ffd54f66');
+    ctx.restore();
+
+    // DEXA summary card
+    const container = document.getElementById('results') || document.querySelector('.results');
+    if (container) {
+      let card = document.getElementById('dexa-summary');
+      if (!card) { card = document.createElement('div'); card.id = 'dexa-summary'; card.className = 'dexa-card'; container.appendChild(card); }
+      const m = window.__fitlife_last_metrics || {};
+      const bf = (typeof m.bodyFatPercent === 'number') ? m.bodyFatPercent : (typeof m.bfPercent === 'number' ? m.bfPercent : null);
+      const sex = ((document.getElementById('sex')?.value) || m.sex || 'male').toString().toLowerCase();
+      let emphasis = 'Balanced', ratio = '1.0:1';
+      if (bf != null) {
+        const android = (sex === 'male' ? (bf >= 20) : (bf >= 30));
+        emphasis = android ? 'Android-dominant' : 'Gynoid-dominant';
+        ratio = android ? '1.2:1' : '0.9:1';
+      }
+      card.innerHTML = `<div class="dexa-title">DEXA-style summary</div>
+        <div class="dexa-row"><span>Body Fat</span><b>${bf != null ? bf.toFixed(1) + '%': '—'}</b></div>
+        <div class="dexa-row"><span>Distribution</span><b>${emphasis}</b></div>
+        <div class="dexa-row"><span>A:G est.</span><b>${ratio}</b></div>`;
+
+      if (!document.getElementById('dexa-style')) {
+        const style = document.createElement('style'); style.id = 'dexa-style'; style.textContent =
+`.dexa-card{margin-top:8px;padding:10px;border-radius:8px;background:#0f172a0d;border:1px solid #0ea5a533}
+.dexa-title{font-weight:600;margin-bottom:6px;color:#0ea5a5}
+.dexa-row{display:flex;justify-content:space-between;gap:8px;margin:4px 0}
+.dexa-row span{color:#475569}
+.dexa-row b{color:#0b132b}`;
+        document.head.appendChild(style);
+      }
+    }
+  } catch(e) { /* noop */ }
+})();
+/// DEXA overlay end
+""".strip() + "\n"
+
+          def insert_after_anchor(path, anchors):
+            p = Path(path)
+            if not p.exists(): return False
+            s = p.read_text(encoding='utf-8')
+            if 'DEXA overlay start' in s: return False
+            for a in anchors:
+              m = re.search(a, s, flags=re.I)
+              if m:
+                end = s.find('\n', m.end())
+                if end == -1: end = len(s) - 1
+                s = s[:end+1] + dexa_snippet + s[end+1:]
+                p.write_text(s, encoding='utf-8')
+                return True
+            # fallback: append
+            p.write_text(s + "\n" + dexa_snippet, encoding='utf-8')
+            return True
+
+          changed = False
+          changed |= insert_after_anchor('assets/js/scan.js', [
+            r'Heatmap:\s*hips ovals', r'In BF-only:\s*draw soft heatmap'
+          ])
+          changed |= insert_after_anchor('assets/js/scan-fallback.js', [
+            r'Fat heatmap overlays'
+          ])
+
+          # bump cache versions in index.html
+          idx = Path('index.html')
+          if idx.exists():
+            html = idx.read_text(encoding='utf-8')
+            html2 = re.sub(r'(scan\\.js)(\\?v=[^"\\s]+)?', r'\\1?v=DEXA22', html)
+            html2 = re.sub(r'(scan-fallback\\.js)(\\?v=[^"\\s]+)?', r'\\1?v=DEXA22', html2)
+            if html2 != html:
+              idx.write_text(html2, encoding='utf-8')
+              changed = True
+
+          # neutralize service worker register if present
+          mainjs = Path('assets/js/main.js')
+          if mainjs.exists():
+            js = mainjs.read_text(encoding='utf-8')
+            js2 = re.sub(r"if\\s*\\(\\s*['\\\"]serviceWorker['\\\"]\\s*in\\s*navigator\\s*\\)\\s*\\{[\\s\\S]*?\\}", "// service worker disabled by automation", js)
+            if js2 != js:
+              mainjs.write_text(js2, encoding='utf-8')
+              changed = True
+
+          print("CHANGED=" + ("1" if changed else "0"))
+          PY
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "DEXA: overlay labels + summary; cache-bust; SW neutralized"
+            git
+Give Cursor a follow-up instruction...
+
+
+General
+
+Overview
+
+Settings
+
+Members
