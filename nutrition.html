@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FitLife Nutrition — Track Calories and Macros</title>
+    <meta name="description" content="Track calorie goals, protein, carbs, fat, and daily meals with FitLife Nutrition Tracker.">
+    <meta name="theme-color" content="#111827">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%2310b981'/%3E%3Ctext x='50' y='62' font-size='56' text-anchor='middle' fill='white' font-family='Arial, sans-serif'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="assets/css/styles.css?v=25">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <button id="mobile-menu-btn" class="icon-btn" aria-label="Toggle menu" aria-expanded="false">☰</button>
+        <a class="brand" href="index.html" aria-label="FitLife home">
+          <span class="brand-mark" aria-hidden="true">🏋️‍♀️</span>
+          <span class="brand-text">FitLife</span>
+        </a>
+        <nav id="site-nav" class="site-nav" aria-label="Primary">
+          <a href="index.html">Home</a>
+          <a href="analysis.html">Analysis</a>
+          <a href="workouts.html">Workouts</a>
+          <a class="current" href="nutrition.html">Nutrition</a>
+          <a href="contact.html">Contact</a>
+          <button id="theme-toggle" class="icon-btn" aria-label="Toggle color theme">🌓</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <div class="container page-hero-inner">
+          <span class="eyebrow">Nutrition Tracker</span>
+          <div class="page-hero-copy">
+            <h1>Track the numbers that shape your progress.</h1>
+            <p>Set calorie and macro goals, log meals, and keep the day visible. Everything stays lightweight and local to your browser.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="nutrition" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Nutrition Tracker</h2>
+            <p>Set goals and log meals. Data stays in your browser.</p>
+          </div>
+
+          <div class="card">
+            <div class="grid cols-5">
+              <label>Date
+                <input id="nt-date" type="date">
+              </label>
+              <label>Calorie goal
+                <input id="nt-calorie-goal" type="number" min="0" inputmode="numeric" placeholder="2200">
+              </label>
+              <label>Protein (g)
+                <input id="nt-protein-goal" type="number" min="0" inputmode="numeric" placeholder="160">
+              </label>
+              <label>Carbs (g)
+                <input id="nt-carbs-goal" type="number" min="0" inputmode="numeric" placeholder="230">
+              </label>
+              <label>Fat (g)
+                <input id="nt-fat-goal" type="number" min="0" inputmode="numeric" placeholder="70">
+              </label>
+            </div>
+            <div class="row">
+              <button id="nt-save-goals-btn" class="btn btn-primary">Save goals</button>
+              <button id="nt-reset-day-btn" class="btn btn-ghost">Reset day</button>
+              <button id="nt-export-btn" class="btn">Export</button>
+              <label class="btn file-btn">
+                Import
+                <input id="nt-import-input" type="file" accept="application/json">
+              </label>
+            </div>
+
+            <div class="progress">
+              <div class="progress-row">
+                <span>Calories</span>
+                <div class="bar"><span id="nt-calories-bar" style="width:0%"></span></div>
+                <span id="nt-total-calories">0 / 0</span>
+              </div>
+              <div class="progress-row">
+                <span>Protein</span>
+                <div class="bar"><span id="nt-protein-bar" style="width:0%"></span></div>
+                <span id="nt-total-protein">0g / 0g</span>
+              </div>
+              <div class="progress-row">
+                <span>Carbs</span>
+                <div class="bar"><span id="nt-carbs-bar" style="width:0%"></span></div>
+                <span id="nt-total-carbs">0g / 0g</span>
+              </div>
+              <div class="progress-row">
+                <span>Fat</span>
+                <div class="bar"><span id="nt-fat-bar" style="width:0%"></span></div>
+                <span id="nt-total-fat">0g / 0g</span>
+              </div>
+            </div>
+
+            <div class="grid cols-5">
+              <label>Meal name
+                <input id="nt-meal-name" type="text" placeholder="Chicken & rice">
+              </label>
+              <label>Calories
+                <input id="nt-calories" type="number" min="0" inputmode="numeric" placeholder="600">
+              </label>
+              <label>Protein (g)
+                <input id="nt-protein" type="number" min="0" inputmode="numeric" placeholder="45">
+              </label>
+              <label>Carbs (g)
+                <input id="nt-carbs" type="number" min="0" inputmode="numeric" placeholder="70">
+              </label>
+              <label>Fat (g)
+                <input id="nt-fat" type="number" min="0" inputmode="numeric" placeholder="15">
+              </label>
+            </div>
+            <div class="row">
+              <button id="nt-add-meal-btn" class="btn btn-primary">Add meal</button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Meal</th>
+                    <th>Calories</th>
+                    <th>Protein</th>
+                    <th>Carbs</th>
+                    <th>Fat</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="nt-meals-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© <span id="year"></span> FitLife. Train smart, recover hard.</p>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="analysis.html">Analysis</a>
+          <a href="workouts.html">Workouts</a>
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script src="assets/js/main.js?v=15" defer></script>
+  </body>
+</html>

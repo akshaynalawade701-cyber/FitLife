@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FitLife Contact — Questions, Feedback, and Support</title>
+    <meta name="description" content="Reach out to FitLife for questions about body analysis, workout planning, nutrition targets, or product feedback.">
+    <meta name="theme-color" content="#111827">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%2310b981'/%3E%3Ctext x='50' y='62' font-size='56' text-anchor='middle' fill='white' font-family='Arial, sans-serif'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="assets/css/styles.css?v=25">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <button id="mobile-menu-btn" class="icon-btn" aria-label="Toggle menu" aria-expanded="false">☰</button>
+        <a class="brand" href="index.html" aria-label="FitLife home">
+          <span class="brand-mark" aria-hidden="true">🏋️‍♀️</span>
+          <span class="brand-text">FitLife</span>
+        </a>
+        <nav id="site-nav" class="site-nav" aria-label="Primary">
+          <a href="index.html">Home</a>
+          <a href="analysis.html">Analysis</a>
+          <a href="workouts.html">Workouts</a>
+          <a href="nutrition.html">Nutrition</a>
+          <a class="current" href="contact.html">Contact</a>
+          <button id="theme-toggle" class="icon-btn" aria-label="Toggle color theme">🌓</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <div class="container page-hero-inner">
+          <span class="eyebrow">Contact</span>
+          <div class="page-hero-copy">
+            <h1>Questions, feedback, or help deciding where to start?</h1>
+            <p>Reach out and we’ll point you toward the right workflow, nutrition target, or training path.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section">
+        <div class="container split-layout">
+          <div class="cta-band">
+            <h2>Need help choosing your path?</h2>
+            <p>If you’re unsure whether to start with body analysis, a workout split, or nutrition tracking, send a note and we’ll help you choose the simplest next step.</p>
+            <div class="kicker-grid">
+              <div class="kicker-card">
+                <strong>Analysis</strong>
+                <p>Body metrics and DEXA-style estimates</p>
+              </div>
+              <div class="kicker-card">
+                <strong>Nutrition</strong>
+                <p>Maintenance, macros, and tracking</p>
+              </div>
+              <div class="kicker-card">
+                <strong>Training</strong>
+                <p>Workout splits and progression</p>
+              </div>
+              <div class="kicker-card">
+                <strong>Progress</strong>
+                <p>Tracking trends and next steps</p>
+              </div>
+            </div>
+          </div>
+          <form id="contact-form" class="card" novalidate>
+            <div class="grid cols-2">
+              <label>Name
+                <input id="cf-name" type="text" required placeholder="Your name">
+              </label>
+              <label>Email
+                <input id="cf-email" type="email" required placeholder="you@example.com">
+              </label>
+            </div>
+            <label>Message
+              <textarea id="cf-message" rows="7" required placeholder="Tell us what you want help with."></textarea>
+            </label>
+            <div class="row">
+              <button class="btn btn-primary" type="submit">Send message</button>
+              <span id="cf-status" class="muted" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© <span id="year"></span> FitLife. Train smart, recover hard.</p>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="analysis.html">Analysis</a>
+          <a href="nutrition.html">Nutrition</a>
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script src="assets/js/main.js?v=15" defer></script>
+  </body>
+</html>

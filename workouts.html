@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FitLife Workouts — Build a Smarter Training Split</title>
+    <meta name="description" content="Create a personalized workout plan by goal, training days, and available equipment with FitLife.">
+    <meta name="theme-color" content="#111827">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%2310b981'/%3E%3Ctext x='50' y='62' font-size='56' text-anchor='middle' fill='white' font-family='Arial, sans-serif'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="assets/css/styles.css?v=25">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <button id="mobile-menu-btn" class="icon-btn" aria-label="Toggle menu" aria-expanded="false">☰</button>
+        <a class="brand" href="index.html" aria-label="FitLife home">
+          <span class="brand-mark" aria-hidden="true">🏋️‍♀️</span>
+          <span class="brand-text">FitLife</span>
+        </a>
+        <nav id="site-nav" class="site-nav" aria-label="Primary">
+          <a href="index.html">Home</a>
+          <a href="analysis.html">Analysis</a>
+          <a class="current" href="workouts.html">Workouts</a>
+          <a href="nutrition.html">Nutrition</a>
+          <a href="contact.html">Contact</a>
+          <button id="theme-toggle" class="icon-btn" aria-label="Toggle color theme">🌓</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <div class="container page-hero-inner">
+          <span class="eyebrow">Workout Builder</span>
+          <div class="hero-spotlight">
+            <div class="hero-panel">
+              <div class="page-hero-copy">
+                <h1>Build a split that fits your goal and your actual week.</h1>
+                <p>Choose your training goal, equipment, and schedule, then let FitLife assemble a simple, practical structure you can save and revisit.</p>
+              </div>
+              <div class="hero-panel-grid">
+                <div class="hero-panel-stat">
+                  <strong>Goal-led</strong>
+                  <span>Muscle, fat loss, endurance, or general fitness</span>
+                </div>
+                <div class="hero-panel-stat">
+                  <strong>Schedule-aware</strong>
+                  <span>3 to 6 day splits that feel realistic</span>
+                </div>
+                <div class="hero-panel-stat">
+                  <strong>Equipment-smart</strong>
+                  <span>Bodyweight, dumbbells, or full gym</span>
+                </div>
+              </div>
+            </div>
+            <aside class="feature-rail">
+              <h3>Best Paired With</h3>
+              <div class="feature-rail-item">
+                <strong>Body Analysis</strong>
+                <p>Use the analysis page first if you want the nutrition and planning layers to guide training intensity.</p>
+              </div>
+              <div class="feature-rail-item">
+                <strong>Nutrition Tracking</strong>
+                <p>Pair your split with daily calorie and macro logging to make progress visible week to week.</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="workouts" class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Workout Builder</h2>
+            <p>Create a plan tailored to your goal, days per week, and equipment.</p>
+          </div>
+
+          <div class="card">
+            <div class="grid cols-4">
+              <label>Goal
+                <select id="wb-goal">
+                  <option value="muscle">Build muscle</option>
+                  <option value="fatloss">Fat loss</option>
+                  <option value="endurance">Endurance</option>
+                  <option value="general">General fitness</option>
+                </select>
+              </label>
+              <label>Experience
+                <select id="wb-experience">
+                  <option>Beginner</option>
+                  <option>Intermediate</option>
+                  <option>Advanced</option>
+                </select>
+              </label>
+              <label>Days / week
+                <select id="wb-days">
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </label>
+              <label>Equipment
+                <select id="wb-equipment">
+                  <option value="bodyweight">Bodyweight</option>
+                  <option value="dumbbells">Dumbbells</option>
+                  <option value="gym">Full gym</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <button id="wb-generate-btn" class="btn btn-primary">Generate Plan</button>
+              <button id="wb-save-btn" class="btn">Save</button>
+              <button id="wb-print-btn" class="btn">Print</button>
+              <button id="wb-reset-btn" class="btn btn-ghost">Reset</button>
+            </div>
+            <div id="wb-plan-container" class="plan"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© <span id="year"></span> FitLife. Train smart, recover hard.</p>
+        <nav class="footer-nav" aria-label="Footer">
+          <a href="analysis.html">Analysis</a>
+          <a href="nutrition.html">Nutrition</a>
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script src="assets/js/main.js?v=15" defer></script>
+  </body>
+</html>
